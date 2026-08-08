@@ -36,9 +36,10 @@
   transform-origin: center;
 }
 
-/* 시군구 상세 뷰: 원본 svg에 색이 없어서 기본 채우기/테두리를 직접 지정 */
+/* 시군구 상세 뷰: 원본 svg에 색이 없어서 기본 채우기/테두리를 직접 지정
+   --sido-color는 zoomToRegion()에서 클릭한 시/도 자신의 fill 색을 읽어와 세팅함 */
 .map__img--detail .region {
-  fill: var(--blue-200);
+  fill: var(--sido-color, var(--blue-200));
   stroke: #fff;
   stroke-width: .6;
 }
@@ -47,6 +48,11 @@
 .map__img--detail .region.is-rolling {
   transform: none;
   filter: brightness(1.08);
+}
+/* 클릭해서 선택 고정된 시군구 — 호버보다 좀 더 밝게, 계속 유지 */
+.map__img--detail .region.is-selected {
+  transform: none;
+  filter: brightness(1.16);
 }
 
 /* 시/도 (개요 지도) */
@@ -97,6 +103,30 @@
 }
 .map__back .ico { width: 16px; height: 16px; }
 .map__back:hover { background: #fff; transform: translateX(-1px); }
+
+/* 호버/선택된 영역 지명 표시 */
+.map__label {
+  position: absolute;
+  z-index: 10;
+  right: 12px;
+  bottom: 12px;
+  margin: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 14px;
+  pointer-events: none;
+}
+.map__label-sido {
+  font-size: 24px;
+  font-weight: 500;
+  color: #000;
+}
+.map__label-sigungu {
+  font-size: 36px;
+  font-weight: 700;
+  color: #000;
+}
 
 .map__markers { position: absolute; inset: 0; pointer-events: none; }
 
