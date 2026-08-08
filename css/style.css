@@ -55,9 +55,9 @@
 
   /* Metrics */
   --header-h: 92px;
-  --gutter: 40px;
-  --col-left: 267px;
-  --col-right: 311px;
+  --gutter: 24px;
+  --col-left: 216px;
+  --col-right: 256px;
   --gap: 16px;
 
   --ease: cubic-bezier(.22, .61, .36, 1);
@@ -201,7 +201,7 @@ body {
   justify-content: space-between;
   gap: 8px;
 }
-.block__head--pad { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.block__head--pad { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .block__title {
   display: flex;
@@ -246,7 +246,7 @@ body {
   display: flex;
   align-items: center;
   gap: 24px;
-  max-width: 1402px;
+  max-width: 1600px;
   height: 100%;
   margin: 0 auto;
   padding: 0 var(--gutter);
@@ -306,7 +306,7 @@ body {
   grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
   gap: var(--gap);
   align-items: start;
-  max-width: 1402px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 20px var(--gutter) 40px;
 }
@@ -321,6 +321,12 @@ body {
 .panel--left  { grid-column: 1; grid-row: 1; }
 .map          { grid-column: 2; grid-row: 1; }
 .panel--right { grid-column: 3; grid-row: 1; }
+
+.panel--left,
+.panel--right {
+  max-height: calc(100vh - var(--header-h) - 80px);
+  overflow-y: auto;
+}
 .themes       { grid-column: 2 / -1; grid-row: 2; }
 
 /* ------------------------------------------------------------
@@ -558,16 +564,35 @@ body {
 .hint .ico { width: 15px; height: 15px; color: var(--blue-400, #8ab0f0); }
 
 /* ------------------------------------------------------------
-   6. 지도 + 마커
-   ------------------------------------------------------------ */
+  6. 지도 + 마커
+------------------------------------------------------------ */
 .map {
   container-type: inline-size;
   position: relative;
   aspect-ratio: 722 / 852;
+  height: calc(100vh - var(--header-h) - 80px);
+  width: 100%;
+  max-width: 100%;
+  justify-self: center;
   border-radius: var(--r-lg);
   overflow: hidden;
 }
-.map__img { width: 100%; height: 100%; object-fit: cover; }
+.map__bg {
+  position: absolute;
+  inset: 0;
+  background-image: url(../images/map-korea-bg.png);
+  width:100%;
+  background-size: cover;
+  background-position: center;
+}
+.map__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(1.2);
+  transform-origin: center;
+}
 
 .map__markers { position: absolute; inset: 0; }
 
@@ -678,7 +703,7 @@ body {
 .today__media { position: relative; }
 .today__img {
   width: 100%;
-  aspect-ratio: 274 / 170;
+  aspect-ratio: 274 / 150;
   border-radius: 12px;
   object-fit: cover;
   background: linear-gradient(160deg, #cfe6f7, #a9d3ee);
@@ -737,7 +762,7 @@ body {
 }
 
 .today__desc {
-  margin: 12px 0 0 7px;
+  margin: 8px 0 0 7px;
   color: var(--ink-600);
   font-size: 12.8px;
   line-height: 1.62;
@@ -748,7 +773,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 9px;
-  margin: 13px 5px 0;
+  margin: 10px 5px 0;
 }
 .stat {
   display: flex;
@@ -921,12 +946,12 @@ body {
 
 /* 넓은 화면 — 여백만 조금 더 */
 @media (min-width: 1500px) {
-  :root { --col-left: 288px; --col-right: 332px; --gap: 20px; }
+  :root { --gutter: 32px; --col-left: 236px; --col-right: 276px; --gap: 20px; }
 }
 
 /* 노트북 */
 @media (max-width: 1360px) {
-  :root { --gutter: 24px; --col-left: 252px; --col-right: 296px; }
+  :root { --gutter: 20px; --col-left: 208px; --col-right: 244px; }
   .gnb__item { padding: 0 12px; font-size: 14px; }
   .logo__sub { display: none; }
 }

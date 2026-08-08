@@ -144,7 +144,9 @@
 
     <!-- ---------- 지도 ---------- -->
     <section class="map" aria-label="대한민국 여행지 지도">
-      <img class="map__img" src="images/map-korea.png" alt="대한민국 지도" />
+      <div class="map__bg">
+        <img class="map__img" src="images/map-korea.svg" alt="대한민국 지도"/>
+      </div>
       <div class="map__markers" id="markers"></div>
       <div class="map__tip" id="mapTip" hidden></div>
     </section>
@@ -153,8 +155,7 @@
     <aside class="panel panel--right">
 
       <div class="block__head">
-        <h2 class="block__title block__title--lg">오늘의 여행지<span class="emoji">✦</span></h2>
-        <span class="block__more block__more--static">해당 여행지 정보</span>
+        <h2 class="block__title block__title--lg">여행지 정보<span class="emoji">✦</span></h2>
       </div>
 
       <article class="today" id="today">
@@ -185,7 +186,7 @@
       </article>
 
       <button class="btn btn--primary btn--cta" type="button" id="btnGo">
-        <svg class="ico"><use href="#i-send"/></svg> 이 여행지로 떠나기 <svg class="ico ico--sm"><use href="#i-send"/></svg>
+        <svg class="ico"><use href="#i-send"/></svg> 이 여행지로 떠나기</svg>
       </button>
 
       <!-- 인기 지역 -->
@@ -194,27 +195,7 @@
         <a class="block__more" href="#">전체보기 <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg></a>
       </div>
       <ul class="popular" id="popularList"></ul>
-
-      <!-- <div class="block__head block__head--pad">
-        <h2 class="block__title">교통 정보</h2>
-        <a class="block__more" href="#">자세히 보기 <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg></a>
-      </div>
-      <ul class="fares" id="fareList"></ul> -->
     </aside>
-
-    <!-- ---------- 지역별 추천 ---------- -->
-    <!-- <section class="themes">
-      <h2 class="block__title">지역별 추천 여행지</h2>
-      <div class="themes__viewport">
-        <ul class="themes__track" id="themeTrack"></ul>
-      </div>
-      <button class="nav-arrow nav-arrow--prev" type="button" id="themePrev" aria-label="이전 여행지">
-        <svg class="ico"><use href="#i-chevron-left"/></svg>
-      </button>
-      <button class="nav-arrow nav-arrow--next" type="button" id="themeNext" aria-label="다음 여행지">
-        <svg class="ico"><use href="#i-chevron-right"/></svg>
-      </button>
-    </section> -->
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

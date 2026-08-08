@@ -36,7 +36,7 @@ const DESTINATIONS = [
     photo: 'images/mk-seoul.png',
     desc: '한강 야경과 도심의 활기가 흐르는<br />서울에서 하루를 가득 채워보세요!',
     distance: '8km',
-    map: { x: 38.5, y: 18.31 },
+    map: { x: 33.23, y: 19.92 },
     fares: {
       car: { time: '25분',     cost: 2400 },
       ktx: { time: '20분',     cost: 1500 },
@@ -52,7 +52,7 @@ const DESTINATIONS = [
     marker: 'images/mk-gangwon.png',
     desc: '푸른 바다와 커피 향이 가득한<br />낭만 도시 강릉으로 떠나보세요!',
     distance: '218km',
-    map: { x: 68.98, y: 16.55 },
+    map: { x: 50.52, y: 16.99 },
     fares: {
       car: { time: '2시간 30분', cost: 19100 },
       ktx: { time: '2시간 10분', cost: 28600 },
@@ -67,7 +67,7 @@ const DESTINATIONS = [
     photo: 'images/mk-sejong.png',
     desc: '여유로운 호수공원과 정갈한 거리,<br />세종에서 천천히 쉬어가세요!',
     distance: '140km',
-    map: { x: 40.86, y: 40.02 },
+    map: { x: 36.72, y: 37.20 },
     fares: {
       car: { time: '1시간 50분', cost: 12400 },
       ktx: { time: '1시간 20분', cost: 18300 },
@@ -83,7 +83,7 @@ const DESTINATIONS = [
     marker: 'images/mk-gyeongbuk.png',
     desc: '천년 고도의 숨결이 남아있는<br />경주로 시간 여행을 떠나보세요!',
     distance: '371km',
-    map: { x: 77.29, y: 41.08 },
+    map: { x: 56.73, y: 40.69 },
     fares: {
       car: { time: '4시간 00분', cost: 32600 },
       ktx: { time: '2시간 05분', cost: 49300 },
@@ -99,7 +99,7 @@ const DESTINATIONS = [
     marker: 'images/mk-jeonbuk.png',
     desc: '한옥의 멋과 맛이 가득한 전주에서<br />하루를 든든하게 채워보세요!',
     distance: '243km',
-    map: { x: 34.63, y: 57.28 },
+    map: { x: 34.56, y: 51.76 },
     fares: {
       car: { time: '2시간 50분', cost: 21400 },
       ktx: { time: '1시간 40분', cost: 34400 },
@@ -115,7 +115,7 @@ const DESTINATIONS = [
     marker: 'images/mk-busan.png',
     desc: '바다와 도시가 어우러진 곳,<br />부산에서 여름을 만끽하세요!',
     distance: '396km',
-    map: { x: 81.72, y: 66.43 },
+    map: { x: 61.17, y: 60.69 },
     fares: {
       car: { time: '4시간 20분', cost: 34800 },
       ktx: { time: '2시간 40분', cost: 59800 },
@@ -131,7 +131,7 @@ const DESTINATIONS = [
     marker: 'images/mk-jeju.png',
     desc: '화산섬이 빚어낸 절경 속에서<br />완전한 휴식을 누려보세요!',
     distance: '452km',
-    map: { x: 41.97, y: 89.79 },
+    map: { x: 26.79, y: 92.39 },
     fares: {
       car: null,
       ktx: null,
