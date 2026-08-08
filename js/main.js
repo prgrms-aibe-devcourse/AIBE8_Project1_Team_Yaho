@@ -29,6 +29,7 @@
 
   /* ---------- DOM ---------- */
   const el = {
+    map:           $('.map'),
     transportList: $('#transportList'),
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
@@ -432,6 +433,23 @@
       el.btnGeo.classList.toggle('is-off', !state.useGeo);
       el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
     });
+
+    /* 지도 휠 확대/축소 (마우스 커서 기준) */
+    if (el.map) {
+      const zoomTargets = [$('.map__bg', el.map), el.markers].filter(Boolean);
+      let mapScale = 1;
+      el.map.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = el.map.getBoundingClientRect();
+        const originX = ((e.clientX - rect.left) / rect.width) * 100;
+        const originY = ((e.clientY - rect.top) / rect.height) * 100;
+        mapScale = Math.min(4, Math.max(1, mapScale - e.deltaY * 0.0015 * mapScale));
+        zoomTargets.forEach((t) => {
+          t.style.transformOrigin = `${originX}% ${originY}%`;
+          t.style.transform = `scale(${mapScale})`;
+        });
+      }, { passive: false });
+    }
 
     /* 캐러셀 */
     if (el.themePrev) el.themePrev.addEventListener('click', () => moveThemes(-1));
