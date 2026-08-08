@@ -29,8 +29,24 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+/* 개요(전국) 지도 배경 이미지와 맞춘 미세 보정 — 시군구 상세 뷰는 해당 없음 */
+.map__img:not(.map__img--detail) {
   transform: translate(5%, -1%);
   transform-origin: center;
+}
+
+/* 시군구 상세 뷰: 원본 svg에 색이 없어서 기본 채우기/테두리를 직접 지정 */
+.map__img--detail .region {
+  fill: var(--blue-200);
+  stroke: #fff;
+  stroke-width: .6;
+}
+/* 시군구는 뜨는 효과 없이 살짝 밝아지기만 */
+.map__img--detail .region:hover,
+.map__img--detail .region.is-rolling {
+  transform: none;
+  filter: brightness(1.08);
 }
 
 .region {
@@ -46,8 +62,6 @@
 }
 .region.is-won { animation: region-pop .7s var(--ease); }
 
-/* 확대된 상태에서는 영역 호버/클릭 비활성 (핀만 동작) */
-.map.is-zoomed .region { pointer-events: none; }
 @keyframes region-pop {
   0%   { transform: translateY(0) scale(1); }
   35%  { transform: translateY(-10px) scale(1.08); }

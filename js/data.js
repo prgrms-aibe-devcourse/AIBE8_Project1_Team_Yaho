@@ -173,25 +173,25 @@ export const DESTINATIONS = [
 /* 지도에 마커로 표시할 여행지 (구버전 고정 마커 방식 — 현재는 미사용, 참고용으로 남겨둠) */
 export const MAP_PINS = ['seoul', 'gangneung', 'sejong', 'gyeongju', 'jeonju', 'busan', 'jeju'];
 
-/* 지도 svg 시/도 id 목록 — destId 있는 곳만 여행지 데이터 연결됨 */
+/* 지도 svg 시/도 id 목록 — 법정동코드 앞 2자리. destId 있는 곳만 여행지 데이터 연결됨 */
 export const REGIONS = [
-  { id: 'seoul',              name: '서울', label: '서울특별시',     destId: 'seoul' },
-  { id: 'busan',              name: '부산', label: '부산광역시',     destId: 'busan' },
-  { id: 'daegu',              name: '대구', label: '대구광역시',     destId: null },
-  { id: 'incheon',            name: '인천', label: '인천광역시',     destId: null },
-  { id: 'gwangju',            name: '광주', label: '광주광역시',     destId: null },
-  { id: 'daejeon',            name: '대전', label: '대전광역시',     destId: null },
-  { id: 'ulsan',              name: '울산', label: '울산광역시',     destId: null },
-  { id: 'sejong-si',          name: '세종', label: '세종특별자치시', destId: 'sejong' },
-  { id: 'gyeonggi-do',        name: '경기', label: '경기도',         destId: 'gapyeong' },
-  { id: 'chungcheongbuk-do',  name: '충북', label: '충청북도',       destId: null },
-  { id: 'chungcheongnam-do',  name: '충남', label: '충청남도',       destId: null },
-  { id: 'jeollabuk-do',       name: '전북', label: '전라북도',       destId: 'jeonju' },
-  { id: 'jeollanam-do',       name: '전남', label: '전라남도',       destId: 'yeosu' },
-  { id: 'gyeongsangbuk-do',   name: '경북', label: '경상북도',       destId: 'gyeongju' },
-  { id: 'gyeongsangnam-do',   name: '경남', label: '경상남도',       destId: null },
-  { id: 'jeju-do',            name: '제주', label: '제주특별자치도', destId: 'jeju' },
-  { id: 'gangwon-do',         name: '강원', label: '강원도',         destId: 'gangneung' },
+  { id: '11', name: '서울', label: '서울특별시',     destId: 'seoul' },
+  { id: '26', name: '부산', label: '부산광역시',     destId: 'busan' },
+  { id: '27', name: '대구', label: '대구광역시',     destId: null },
+  { id: '28', name: '인천', label: '인천광역시',     destId: null },
+  { id: '29', name: '광주', label: '광주광역시',     destId: null },
+  { id: '30', name: '대전', label: '대전광역시',     destId: null },
+  { id: '31', name: '울산', label: '울산광역시',     destId: null },
+  { id: '36', name: '세종', label: '세종특별자치시', destId: 'sejong' },
+  { id: '41', name: '경기', label: '경기도',         destId: 'gapyeong' },
+  { id: '43', name: '충북', label: '충청북도',       destId: null },
+  { id: '44', name: '충남', label: '충청남도',       destId: null },
+  { id: '45', name: '전북', label: '전라북도',       destId: 'jeonju' },
+  { id: '46', name: '전남', label: '전라남도',       destId: 'yeosu' },
+  { id: '47', name: '경북', label: '경상북도',       destId: 'gyeongju' },
+  { id: '48', name: '경남', label: '경상남도',       destId: null },
+  { id: '50', name: '제주', label: '제주특별자치도', destId: 'jeju' },
+  { id: '51', name: '강원', label: '강원도',         destId: 'gangneung' },
 ];
 
 /* 인기 지역 (좌측 패널) */

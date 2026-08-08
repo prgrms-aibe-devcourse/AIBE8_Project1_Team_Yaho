@@ -23,6 +23,8 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
 
   const state = { rolling: false, zoomedRegion: null };
   let mapScale = 1;
+  let overviewSvgHTML = null;
+  let sigunguDocPromise = null;
 
   /* --- 지도 SVG 인라인 로드 (지역별 id/path 접근용) --- */
   async function loadMapSvg() {
@@ -32,47 +34,58 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
       el.mapBg.innerHTML = await res.text();
       const svg = el.mapBg.querySelector('svg');
       if (svg) svg.classList.add('map__img');
+      overviewSvgHTML = el.mapBg.innerHTML;
     } catch (err) {
       console.error('지도 SVG 로드 실패:', err);
     }
   }
 
-  /* --- 지도 지역(시/도) 확대 + 핀 표시 --- */
-  function zoomToRegion(regionId) {
-    const region = document.getElementById(regionId);
+  /* --- 시군구 상세 svg는 클릭 시점에 한 번만 불러와 캐시 --- */
+  function loadSigunguDoc() {
+    if (!sigunguDocPromise) {
+      sigunguDocPromise = fetch('images/map-korea-sigungu.svg')
+        .then((res) => res.text())
+        .then((text) => new DOMParser().parseFromString(text, 'image/svg+xml'));
+    }
+    return sigunguDocPromise;
+  }
+
+  /* --- 시/도 클릭 → 전체 지도를 확대하는 대신, 그 시/도에 속한 시군구만 모아서 표시 --- */
+  async function zoomToRegion(regionId) {
     const info = REGIONS.find((r) => r.id === regionId);
-    if (!region || !info || !el.map || !el.mapBg) return;
+    if (!info || !el.map || !el.mapBg) return;
 
-    /* 기준 좌표 측정을 위해 우선 원상태로 리셋 */
-    el.mapBg.style.transform = 'none';
-    const mapRect = el.map.getBoundingClientRect();
-    const regionRect = region.getBoundingClientRect();
-    const cx = regionRect.left + regionRect.width / 2 - mapRect.left;
-    const cy = regionRect.top + regionRect.height / 2 - mapRect.top;
+    const doc = await loadSigunguDoc();
+    const matched = Array.from(doc.querySelectorAll('g[id]'))
+      .filter((g) => g.id.startsWith(regionId))
+      .map((g) => g.cloneNode(true));
+    if (!matched.length) return;
 
-    const scale = Math.min(16, Math.max(1.8, Math.min(
-      (mapRect.width * 0.6) / regionRect.width,
-      (mapRect.height * 0.6) / regionRect.height
-    )));
+    /* 이전 상태(개요 지도 휠줌 등)의 transform 잔여값 제거 */
+    el.mapBg.style.transform = '';
+    el.mapBg.style.transformOrigin = '';
+    mapScale = 1;
 
-    const scaledW = mapRect.width * scale;
-    const scaledH = mapRect.height * scale;
-    /* 확대된 지도 바깥 빈 공간이 보이지 않도록 이동 범위를 지도 경계 안쪽으로 고정 */
-    const tx = Math.min(0, Math.max(mapRect.width - scaledW, mapRect.width / 2 - cx * scale));
-    const ty = Math.min(0, Math.max(mapRect.height - scaledH, mapRect.height / 2 - cy * scale));
+    const svgEl = doc.documentElement.cloneNode(false);
+    matched.forEach((g) => { g.classList.add('region'); svgEl.appendChild(g); });
+    svgEl.classList.add('map__img', 'map__img--detail');
+    svgEl.removeAttribute('width');
+    svgEl.removeAttribute('height');
 
-    el.mapBg.style.transformOrigin = '0 0';
-    el.mapBg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    el.mapBg.innerHTML = '';
+    el.mapBg.appendChild(svgEl);
 
-    /* 핀 위치 = 확대된 좌표계 기준 영역 실제 중심 (경계 클램프 시 중앙에서 벗어날 수 있어 재계산) */
-    const pinX = ((cx * scale + tx) / mapRect.width) * 100;
-    const pinY = ((cy * scale + ty) / mapRect.height) * 100;
+    /* 표시된 시군구들의 실제 좌표 범위로 viewBox를 맞춤 — 전체를 확대하는 게 아니라
+       해당 시/도 영역만 그 좌표 그대로 잘라서 컨테이너에 꽉 채우는 방식 */
+    const bbox = svgEl.getBBox();
+    const pad = Math.max(bbox.width, bbox.height) * 0.06;
+    svgEl.setAttribute('viewBox', `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`);
 
     const dest = info.destId ? byId(info.destId) : null;
     el.markers.style.transform = '';
     el.markers.innerHTML = `
       <button class="marker" type="button" ${dest ? `data-dest="${dest.id}"` : ''}
-              style="left:${pinX}%; top:${pinY}%" aria-label="${info.label}">
+              style="left:50%; top:50%" aria-label="${info.label}">
         ${dest && (dest.marker || dest.photo) ? `<img class="marker__img" src="${dest.marker || dest.photo}" alt="" />` : ''}
       </button>`;
 
@@ -85,7 +98,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
   /* --- 전체 지도로 복귀 --- */
   function resetMapView() {
     if (!el.mapBg) return;
+    if (overviewSvgHTML) el.mapBg.innerHTML = overviewSvgHTML;
     el.mapBg.style.transform = '';
+    el.mapBg.style.transformOrigin = '';
     el.markers.style.transform = '';
     el.markers.innerHTML = '';
     el.map.classList.remove('is-zoomed');
@@ -125,7 +140,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     const info = REGIONS.find((r) => r.id === landedId);
     const dest = info && info.destId ? byId(info.destId) : null;
 
-    zoomToRegion(landedId);
+    await zoomToRegion(landedId);
     showToast(`🎉 오늘의 여행지는 「${dest ? dest.name : info.label}」!`);
 
     drawEl.classList.remove('is-rolling');
