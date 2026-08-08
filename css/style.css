@@ -593,11 +593,56 @@ body {
   transform-origin: center;
 }
 
-.map__markers { position: absolute; inset: 0; }
+.region {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .18s var(--ease), filter .18s var(--ease);
+}
+.region:hover,
+.region.is-rolling {
+  transform: translateY(-4px) scale(1.03);
+  filter: brightness(1.06) drop-shadow(0 6px 10px rgba(15, 23, 42, .35));
+}
+.region.is-won { animation: region-pop .7s var(--ease); }
+
+/* 확대된 상태에서는 영역 호버/클릭 비활성 (핀만 동작) */
+.map.is-zoomed .region { pointer-events: none; }
+@keyframes region-pop {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-10px) scale(1.08); }
+  65%  { transform: translateY(-2px) scale(.98); }
+  100% { transform: translateY(-4px) scale(1.03); }
+}
+
+.map__back {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(4px);
+  color: var(--ink-800);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sh-2);
+  transition: background-color .16s var(--ease), transform .16s var(--ease);
+}
+.map__back .ico { width: 16px; height: 16px; }
+.map__back:hover { background: #fff; transform: translateX(-1px); }
+
+.map__markers { position: absolute; inset: 0; pointer-events: none; }
 
 .marker {
   position: absolute;
   z-index: 2;
+  pointer-events: auto;
   width: 9.14cqw;
   height: 9.14cqw;
   border-radius: var(--r-pill);

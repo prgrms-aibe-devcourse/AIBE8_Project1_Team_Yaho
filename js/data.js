@@ -173,6 +173,27 @@ const DESTINATIONS = [
 /* 지도에 마커로 표시할 여행지 */
 const MAP_PINS = ['seoul', 'gangneung', 'sejong', 'gyeongju', 'jeonju', 'busan', 'jeju'];
 
+/* 지도 svg 시/도 id 목록 — destId 있는 곳만 여행지 데이터 연결됨 */
+const REGIONS = [
+  { id: 'seoul',              name: '서울', label: '서울특별시',     destId: 'seoul' },
+  { id: 'busan',              name: '부산', label: '부산광역시',     destId: 'busan' },
+  { id: 'daegu',              name: '대구', label: '대구광역시',     destId: null },
+  { id: 'incheon',            name: '인천', label: '인천광역시',     destId: null },
+  { id: 'gwangju',            name: '광주', label: '광주광역시',     destId: null },
+  { id: 'daejeon',            name: '대전', label: '대전광역시',     destId: null },
+  { id: 'ulsan',              name: '울산', label: '울산광역시',     destId: null },
+  { id: 'sejong-si',          name: '세종', label: '세종특별자치시', destId: 'sejong' },
+  { id: 'gyeonggi-do',        name: '경기', label: '경기도',         destId: 'gapyeong' },
+  { id: 'chungcheongbuk-do',  name: '충북', label: '충청북도',       destId: null },
+  { id: 'chungcheongnam-do',  name: '충남', label: '충청남도',       destId: null },
+  { id: 'jeollabuk-do',       name: '전북', label: '전라북도',       destId: 'jeonju' },
+  { id: 'jeollanam-do',       name: '전남', label: '전라남도',       destId: 'yeosu' },
+  { id: 'gyeongsangbuk-do',   name: '경북', label: '경상북도',       destId: 'gyeongju' },
+  { id: 'gyeongsangnam-do',   name: '경남', label: '경상남도',       destId: null },
+  { id: 'jeju-do',            name: '제주', label: '제주특별자치도', destId: 'jeju' },
+  { id: 'gangwon-do',         name: '강원', label: '강원도',         destId: 'gangneung' },
+];
+
 /* 인기 지역 (좌측 패널) */
 const POPULAR = [
   { destId: 'gangneung', title: '강원도',     desc: '자연과 힐링의 명소',   thumb: 'images/pop-gangwon.png' },
