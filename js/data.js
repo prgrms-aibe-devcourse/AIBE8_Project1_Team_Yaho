@@ -8,7 +8,7 @@
    ============================================================ */
 
 /* 출발지 후보 */
-const ORIGINS = [
+export const ORIGINS = [
   '서울특별시 강남구',
   '서울특별시 마포구',
   '서울특별시 종로구',
@@ -20,7 +20,7 @@ const ORIGINS = [
 ];
 
 /* 교통수단 정의 (좌측 리스트 순서와 동일) */
-const TRANSPORTS = [
+export const TRANSPORTS = [
   { key: 'car',  label: '자동차',    icon: 'i-car',   emoji: '🚙', fareLabel: '자가용 이용 시' },
   { key: 'ktx',  label: '기차 (KTX)', icon: 'i-train', emoji: '🚆', fareLabel: 'KTX 이용 시' },
   { key: 'bus',  label: '고속버스',   icon: 'i-bus',   emoji: '🚌', fareLabel: '고속버스 이용 시' },
@@ -28,7 +28,7 @@ const TRANSPORTS = [
 ];
 
 /* 여행지 — 지도 좌표(x/y)는 지도 이미지 기준 백분율 */
-const DESTINATIONS = [
+export const DESTINATIONS = [
   {
     id: 'seoul',
     name: '서울',
@@ -170,11 +170,11 @@ const DESTINATIONS = [
   },
 ];
 
-/* 지도에 마커로 표시할 여행지 */
-const MAP_PINS = ['seoul', 'gangneung', 'sejong', 'gyeongju', 'jeonju', 'busan', 'jeju'];
+/* 지도에 마커로 표시할 여행지 (구버전 고정 마커 방식 — 현재는 미사용, 참고용으로 남겨둠) */
+export const MAP_PINS = ['seoul', 'gangneung', 'sejong', 'gyeongju', 'jeonju', 'busan', 'jeju'];
 
 /* 지도 svg 시/도 id 목록 — destId 있는 곳만 여행지 데이터 연결됨 */
-const REGIONS = [
+export const REGIONS = [
   { id: 'seoul',              name: '서울', label: '서울특별시',     destId: 'seoul' },
   { id: 'busan',              name: '부산', label: '부산광역시',     destId: 'busan' },
   { id: 'daegu',              name: '대구', label: '대구광역시',     destId: null },
@@ -195,7 +195,7 @@ const REGIONS = [
 ];
 
 /* 인기 지역 (좌측 패널) */
-const POPULAR = [
+export const POPULAR = [
   { destId: 'gangneung', title: '강원도',     desc: '자연과 힐링의 명소',   thumb: 'images/pop-gangwon.png' },
   { destId: 'jeju',      title: '제주도',     desc: '가장 사랑받는 여행지', thumb: 'images/pop-jeju.png' },
   { destId: 'busan',     title: '부산광역시', desc: '바다와 도시의 조화',   thumb: 'images/pop-busan.png' },
@@ -203,7 +203,7 @@ const POPULAR = [
 ];
 
 /* 테마별 추천 여행지 (하단 캐러셀) */
-const THEMES = [
+export const THEMES = [
   { destId: 'busan',     tag: '바다',  name: '부산 해운대',       glyph: '🌊', tone: '#3b82f6', img: 'images/th-haeundae.png' },
   { destId: 'jeju',      tag: '자연',  name: '제주 한라산',       glyph: '🌿', tone: '#22a06b', img: 'images/th-hallasan.png' },
   { destId: 'gyeongju',  tag: '역사',  name: '경주 불국사',       glyph: '🏛', tone: '#d97706', img: 'images/th-bulguksa.png' },

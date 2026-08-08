@@ -1,0 +1,175 @@
+/* ============================================================
+   map.css — 지도 컴포넌트 (지도 박스 / 시·도 영역 / 마커 / 뽑기 애니메이션)
+   ------------------------------------------------------------
+   style.css의 "6. 지도 + 마커" 섹션을 분리한 파일.
+   지도가 페이지 그리드 안에서 차지하는 위치(.layout 그리드 컬럼,
+   반응형 그리드 배치)는 페이지 레이아웃 관심사라 style.css 쪽
+   "4. 레이아웃 그리드" / "10. 반응형" 섹션에 그대로 남아있음.
+   ============================================================ */
+.map {
+  container-type: inline-size;
+  position: relative;
+  aspect-ratio: 722 / 852;
+  height: calc(100vh - var(--header-h) - 80px);
+  width: 100%;
+  max-width: 100%;
+  justify-self: center;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.map__bg {
+  position: absolute;
+  inset: 0;
+  background-image: url(../images/map-korea-bg.png);
+  width:100%;
+  background-size: cover;
+  background-position: center;
+}
+.map__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translate(5%, -1%);
+  transform-origin: center;
+}
+
+.region {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .18s var(--ease), filter .18s var(--ease);
+}
+.region:hover,
+.region.is-rolling {
+  transform: translateY(-4px) scale(1.03);
+  filter: brightness(1.06) drop-shadow(0 6px 10px rgba(15, 23, 42, .35));
+}
+.region.is-won { animation: region-pop .7s var(--ease); }
+
+/* 확대된 상태에서는 영역 호버/클릭 비활성 (핀만 동작) */
+.map.is-zoomed .region { pointer-events: none; }
+@keyframes region-pop {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-10px) scale(1.08); }
+  65%  { transform: translateY(-2px) scale(.98); }
+  100% { transform: translateY(-4px) scale(1.03); }
+}
+
+.map__back {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(4px);
+  color: var(--ink-800);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sh-2);
+  transition: background-color .16s var(--ease), transform .16s var(--ease);
+}
+.map__back .ico { width: 16px; height: 16px; }
+.map__back:hover { background: #fff; transform: translateX(-1px); }
+
+.map__markers { position: absolute; inset: 0; pointer-events: none; }
+
+.marker {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  width: 9.14cqw;
+  height: 9.14cqw;
+  border-radius: var(--r-pill);
+  background: #fff;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 78%;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .22);
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
+}
+
+/* 핀 꼬리 */
+.marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -.8cqw;
+  width: 2.1cqw;
+  height: 2.1cqw;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 0 0 .5cqw 0;
+  z-index: -1;
+}
+
+.marker__img {
+  width: 100%;
+  height: 100%;
+  padding: 3.5%;
+  border-radius: var(--r-pill);
+  object-fit: cover;
+  transform: scale(1.16);
+  transform-origin: 50% 50%;
+  clip-path: circle(46% at 50% 50%);
+}
+
+.marker:hover,
+.marker:focus-visible {
+  z-index: 5;
+  transform: translate(-50%, -50%) scale(1.14);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .3);
+}
+
+.marker.is-active {
+  z-index: 4;
+  box-shadow: 0 0 0 3px var(--blue-500), 0 8px 20px rgba(37, 99, 235, .38);
+}
+
+/* 뽑기 중 하이라이트 */
+.marker.is-rolling {
+  z-index: 6;
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, .55), 0 10px 24px rgba(37, 99, 235, .4);
+}
+
+/* 뽑기 당첨 연출 */
+.marker.is-won { animation: marker-pop .7s var(--ease); }
+@keyframes marker-pop {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  35%  { transform: translate(-50%, -50%) scale(1.38); }
+  65%  { transform: translate(-50%, -50%) scale(.96); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 마커 툴팁 */
+.map__tip {
+  position: absolute;
+  z-index: 10;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, .88);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .28);
+}
+.map__tip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 0 0 2px 0;
+}
+.map__tip small { display: block; font-weight: 400; color: rgba(255, 255, 255, .68); font-size: 11px; }
