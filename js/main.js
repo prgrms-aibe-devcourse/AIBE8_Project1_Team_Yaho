@@ -30,6 +30,7 @@
   /* ---------- DOM ---------- */
   const el = {
     map:           $('.map'),
+    mapBg:         $('#mapBg'),
     transportList: $('#transportList'),
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
@@ -109,6 +110,19 @@
           <span class="spot-grid__name">${t.name}</span>
         </button>
       </li>`).join('');
+  }
+
+  /* --- 지도 SVG 인라인 로드 (지역별 id/path 접근용) --- */
+  async function loadMapSvg() {
+    if (!el.mapBg) return;
+    try {
+      const res = await fetch('images/map-korea.svg');
+      el.mapBg.innerHTML = await res.text();
+      const svg = el.mapBg.querySelector('svg');
+      if (svg) svg.classList.add('map__img');
+    } catch (err) {
+      console.error('지도 SVG 로드 실패:', err);
+    }
   }
 
   /* --- 지도 마커 --- */
@@ -475,6 +489,7 @@
      시작
      ============================================================ */
   function init() {
+    loadMapSvg();
     renderPopular();
     renderSpotGrid();
     renderMarkers();

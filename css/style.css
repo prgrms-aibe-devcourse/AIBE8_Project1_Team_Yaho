@@ -586,10 +586,9 @@ body {
   background-position: center;
 }
 .map__img {
+  display: block;
   width: 100%;
-  object-fit: contain;
-  object-position: center;
-  transform: scale(1.0);
+  height: 100%;
   transform: translate(5%, -1%);
   transform-origin: center;
 }
