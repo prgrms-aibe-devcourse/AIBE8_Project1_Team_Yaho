@@ -112,7 +112,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
   /* --- 랜덤 뽑기 (시/도 영역 기준) --- */
   async function runDraw() {
     if (state.rolling) return;
-    const regionEls = $$('.region', el.mapBg);
+    const regionEls = $$('.sido', el.mapBg);
     if (!regionEls.length) return;
 
     state.rolling = true;
@@ -152,8 +152,8 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     /* 지도 지역 클릭 (이벤트 위임 — svg 비동기 로드와 무관하게 동작) */
     if (el.mapBg) {
       el.mapBg.addEventListener('click', (e) => {
-        const region = e.target.closest('.region');
-        if (region) zoomToRegion(region.id);
+        const sido = e.target.closest('.sido');
+        if (sido) zoomToRegion(sido.id);
       });
     }
 

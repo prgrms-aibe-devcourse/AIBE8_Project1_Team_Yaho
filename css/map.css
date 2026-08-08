@@ -49,24 +49,31 @@
   filter: brightness(1.08);
 }
 
-.region {
+/* 시/도 (개요 지도) */
+.sido {
   cursor: pointer;
   transform-box: fill-box;
   transform-origin: center;
   transition: transform .18s var(--ease), filter .18s var(--ease);
 }
-.region:hover,
-.region.is-rolling {
+.sido:hover,
+.sido.is-rolling {
   transform: translateY(-4px) scale(1.03);
   filter: brightness(1.06) drop-shadow(0 6px 10px rgba(15, 23, 42, .35));
 }
-.region.is-won { animation: region-pop .7s var(--ease); }
+.sido.is-won { animation: sido-pop .7s var(--ease); }
 
-@keyframes region-pop {
+@keyframes sido-pop {
   0%   { transform: translateY(0) scale(1); }
   35%  { transform: translateY(-10px) scale(1.08); }
   65%  { transform: translateY(-2px) scale(.98); }
   100% { transform: translateY(-4px) scale(1.03); }
+}
+
+/* 시군구 (상세 뷰) — 밝기만 살짝, 뜨는 효과 없음 */
+.region {
+  cursor: pointer;
+  transition: filter .18s var(--ease);
 }
 
 .map__back {
