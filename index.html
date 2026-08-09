@@ -126,14 +126,18 @@
         </button>
       </section>
 
-      <!-- 교통수단 선택 -->
-      <!-- <section class="block">
-        <h2 class="block__title">교통수단 선택</h2>
-        <ul class="transport" id="transportList"></ul>
-      </section> -->
+      <!-- 인기 지역 -->
+      <div class="block__head block__head--pad">
+        <h2 class="block__title">인기 지역</h2>
+        <a class="block__more" href="#">전체보기 <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg></a>
+      </div>
+      <ul class="popular" id="popularList"></ul>
 
-      <!-- 인기 여행지 그리드 -->
+      <!-- 이런 여행지 어때요? -->
       <section class="block">
+        <div class="block__head block__head--pad">
+          <h2 class="block__title">이런 여행지 어때요?</h2>
+        </div>
         <ul class="spot-grid" id="spotGrid"></ul>
       </section>
 
@@ -161,7 +165,7 @@
     <aside class="panel panel--right">
 
       <div class="block__head">
-        <h2 class="block__title block__title--lg">여행지 정보<span class="emoji">✦</span></h2>
+        <h2 class="block__title block__title--lg">오늘의 여행지<span class="emoji">✦</span></h2>
       </div>
 
       <article class="today" id="today">
@@ -195,12 +199,10 @@
         <svg class="ico"><use href="#i-send"/></svg> 이 여행지로 떠나기</svg>
       </button>
 
-      <!-- 인기 지역 -->
       <div class="block__head block__head--pad">
-        <h2 class="block__title">인기 지역</h2>
-        <a class="block__more" href="#">전체보기 <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg></a>
+        <h2 class="block__title">내 여행 기록</h2>
       </div>
-      <ul class="popular" id="popularList"></ul>
+      <div class="my-record" id="myRecord"></div>
     </aside>
   </main>
 

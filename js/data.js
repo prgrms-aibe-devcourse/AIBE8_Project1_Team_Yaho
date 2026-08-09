@@ -202,12 +202,12 @@ export const POPULAR = [
   { destId: 'yeosu',     title: '전라남도',   desc: '맛과 멋이 있는 곳',    thumb: 'images/pop-jeonnam.png' },
 ];
 
-/* 테마별 추천 여행지 (하단 캐러셀) */
+/* 이런 여행지 어때요? */
 export const THEMES = [
   { destId: 'busan',     tag: '바다',  name: '부산 해운대',       glyph: '🌊', tone: '#3b82f6', img: 'images/th-haeundae.png' },
   { destId: 'jeju',      tag: '자연',  name: '제주 한라산',       glyph: '🌿', tone: '#22a06b', img: 'images/th-hallasan.png' },
   { destId: 'gyeongju',  tag: '역사',  name: '경주 불국사',       glyph: '🏛', tone: '#d97706', img: 'images/th-bulguksa.png' },
   { destId: 'jeonju',    tag: '감성',  name: '전주 한옥마을',     glyph: '🏮', tone: '#8b5cf6', img: 'images/th-hanok.png' },
-  { destId: 'jeonju',    tag: '맛집',  name: '전주 비빔밥',       glyph: '🍜', tone: '#ef4778', img: 'images/th-bibimbap.png' },
-  { destId: 'gapyeong',  tag: '힐링',  name: '가평 아침고요수목원', glyph: '🌸', tone: '#0ea5b7', img: 'images/th-arboretum.png' },
+  // { destId: 'jeonju',    tag: '맛집',  name: '전주 비빔밥',       glyph: '🍜', tone: '#ef4778', img: 'images/th-bibimbap.png' },
+  // { destId: 'gapyeong',  tag: '힐링',  name: '가평 아침고요수목원', glyph: '🌸', tone: '#0ea5b7', img: 'images/th-arboretum.png' },
 ];

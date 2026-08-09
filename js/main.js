@@ -25,6 +25,10 @@ import { initMap } from './map.js';
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
     themeIndex: 0,
+    /* 로그인 연동 전 데모용 — 실제로는 서버에서 받아와야 함 */
+    loggedIn: JSON.parse(localStorage.getItem('wtg:loggedIn') || 'false'),
+    recordStamps: 4,
+    recordJournals: 2,
   };
 
   /* ---------- DOM ---------- */
@@ -48,6 +52,7 @@ import { initMap } from './map.js';
     btnDraw:   $('#btnDraw'),
     btnLike:   $('#btnLike'),
     btnGo:     $('#btnGo'),
+    myRecord:  $('#myRecord'),
     btnGeo:    $('#btnGeo'),
     geoLabel:  $('#geoLabel'),
     btnSaved:  $('#btnSaved'),
@@ -175,6 +180,29 @@ import { initMap } from './map.js';
     el.savedCount.textContent = n;
     el.savedCount.hidden = n === 0;
     el.btnSaved.classList.toggle('is-on', n > 0);
+  }
+
+  /* --- 내 여행 기록 --- */
+  function renderMyRecord() {
+    if (!el.myRecord) return;
+    if (state.loggedIn) {
+      el.myRecord.innerHTML = `
+        <ul>
+          <li>
+            <span class="emoji">🏷️</span>
+            <span class>여행 스탬프</span><strong class="stat__value">${state.recordStamps}개</strong>
+          </li>
+          <li class>
+            <span class="emoji">📖</span>
+            <span>여행일지</span><strong class="stat__value">${state.recordJournals}개</strong>
+          </li>
+        </ul>
+        <button class="my-record__btn" type="button" id="btnRecordView">기록 보러가기</button>`;
+    } else {
+      el.myRecord.innerHTML = `
+        <p class="my-record__msg">여행 스탬프와 여행일지를 남겨보세요</p>
+        <button class="my-record__btn" type="button" id="btnRecordLogin">로그인하고 시작하기</button>`;
+    }
   }
 
   /* --- 활성 표시 동기화 --- */
@@ -344,6 +372,20 @@ import { initMap } from './map.js';
       showToast(`${t.emoji} ${state.origin} → ${d.name} · ${t.label} 경로를 준비할게요!`);
     });
 
+    /* 내 여행 기록 */
+    if (el.myRecord) {
+      el.myRecord.addEventListener('click', (e) => {
+        if (e.target.closest('#btnRecordLogin')) {
+          state.loggedIn = true;
+          localStorage.setItem('wtg:loggedIn', 'true');
+          renderMyRecord();
+          showToast('로그인했어요');
+        } else if (e.target.closest('#btnRecordView')) {
+          showToast('기록 페이지는 준비 중이에요');
+        }
+      });
+    }
+
     /* 찜 목록 버튼 */
     el.btnSaved.addEventListener('click', () => {
       const n = state.liked.size;
@@ -414,6 +456,7 @@ import { initMap } from './map.js';
 
     selectDestination(state.destId, { toast: false });
     renderSavedCount();
+    renderMyRecord();
     moveThemes(0);
     bindEvents();
     initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
