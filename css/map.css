@@ -104,18 +104,30 @@
 .map__back .ico { width: 16px; height: 16px; }
 .map__back:hover { background: #fff; transform: translateX(-1px); }
 
-/* 호버/선택된 영역 지명 표시 */
+/* 호버/선택된 영역 지명 표시 + 클릭 시 시/도·시/군/구 선택 드롭업 */
 .map__label {
   position: absolute;
   z-index: 10;
   right: 12px;
   bottom: 12px;
   margin: 12px;
+}
+.map__label-btn {
   display: flex;
   flex-direction: column;
   gap: 1px;
   padding: 8px 14px;
-  pointer-events: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: background-color .16s var(--ease);
+}
+.map__label-btn:hover,
+.map__label-btn[aria-expanded="true"] {
+  background: rgba(255, 255, 255, .55);
 }
 .map__label-sido {
   font-size: 24px;
@@ -127,6 +139,51 @@
   font-weight: 700;
   color: #000;
 }
+
+/* 클릭 시 라벨 기준 위로 떠오르는 드롭업 (시/도 · 시/군/구 목록) */
+.map__label-dropup {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  min-width: 180px;
+  max-width: 240px;
+  max-height: 280px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--sh-3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity .16s var(--ease), transform .16s var(--ease), visibility .16s;
+  pointer-events: none;
+}
+.map__label-dropup.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.map__label-dropup li + li { margin-top: 1px; }
+.map__label-dropup button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-800);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .14s var(--ease);
+}
+.map__label-dropup button:hover { background: var(--blue-50); }
 
 .map__markers { position: absolute; inset: 0; pointer-events: none; }
 

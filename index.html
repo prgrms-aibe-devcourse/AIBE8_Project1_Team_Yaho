@@ -155,9 +155,12 @@
       <div class="map__bg" id="mapBg"></div>
       <div class="map__markers" id="markers"></div>
       <div class="map__tip" id="mapTip" hidden></div>
-      <div class="map__label" id="mapLabel" hidden>
-        <span class="map__label-sido" id="mapLabelSido"></span>
-        <strong class="map__label-sigungu" id="mapLabelSigungu"></strong>
+      <div class="map__label" id="mapLabel">
+        <button class="map__label-btn" id="mapLabelBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="map__label-sido" id="mapLabelSido"></span>
+          <strong class="map__label-sigungu" id="mapLabelSigungu">클릭하여 지역 선택</strong>
+        </button>
+        <ul class="map__label-dropup" id="mapLabelDropup" role="listbox"></ul>
       </div>
     </section>
 

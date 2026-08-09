@@ -20,11 +20,14 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     mapBack:       $('#mapBack'),
     markers:       $('#markers'),
     label:         $('#mapLabel'),
+    labelBtn:      $('#mapLabelBtn'),
     labelSido:     $('#mapLabelSido'),
     labelSigungu:  $('#mapLabelSigungu'),
+    dropup:        $('#mapLabelDropup'),
   };
 
-  const state = { rolling: false, zoomedRegion: null, selectedId: null };
+  const DEFAULT_LABEL_TEXT = '클릭하여 지역 선택';
+  const state = { rolling: false, zoomedRegion: null, selectedId: null, sigunguIds: null };
   let mapScale = 1;
   let overviewSvgHTML = null;
   let sigunguDocPromise = null;
@@ -46,12 +49,46 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (!names || !el.label) return;
     el.labelSido.textContent = names.sigungu ? names.sido : '';
     el.labelSigungu.textContent = names.sigungu || names.sido;
-    el.label.hidden = false;
   }
 
+  /* 호버가 끝나면 지명 대신 기본 안내 텍스트로 복귀 (선택 고정 중엔 유지) */
   function hideLabel(force) {
     if (!el.label || (state.selectedId && !force)) return;
-    el.label.hidden = true;
+    el.labelSido.textContent = '';
+    el.labelSigungu.textContent = DEFAULT_LABEL_TEXT;
+  }
+
+  /* --- 라벨 클릭 → 드롭업으로 시/도(전체 지도) 또는 시/군/구(확대 중) 목록 표시 --- */
+  function closeDropup() {
+    if (!el.dropup) return;
+    el.dropup.classList.remove('is-open');
+    if (el.labelBtn) el.labelBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderDropup() {
+    if (!el.dropup) return;
+    const items = state.zoomedRegion
+      ? (state.sigunguIds || []).map((id) => ({ id, name: (bjdCodes && bjdCodes.sigungu[id]) || id, key: 'sigungu' }))
+      : REGIONS.map((r) => ({ id: r.id, name: r.label, key: 'sido' }));
+    el.dropup.innerHTML = items
+      .map((it) => `<li role="option"><button type="button" data-key="${it.key}" data-id="${it.id}">${it.name}</button></li>`)
+      .join('');
+  }
+
+  function openDropup() {
+    if (!el.dropup) return;
+    renderDropup();
+    el.dropup.classList.add('is-open');
+    if (el.labelBtn) el.labelBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  /* 드롭업에서 시/군/구를 고르면 svg 클릭과 동일하게 선택 고정 처리 */
+  function selectRegionInDropup(id) {
+    const region = el.mapBg.querySelector(`[id="${id}"]`);
+    $$('.region.is-selected', el.mapBg).forEach((r) => r.classList.remove('is-selected'));
+    if (region) region.classList.add('is-selected');
+    state.selectedId = id;
+    showLabel(id);
   }
 
   /* --- 지도 SVG 인라인 로드 (지역별 id/path 접근용) --- */
@@ -98,7 +135,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     el.mapBg.style.transformOrigin = '';
     mapScale = 1;
     state.selectedId = null;
+    state.sigunguIds = matched.map((g) => g.id);
     hideLabel(true);
+    closeDropup();
 
     const svgEl = doc.documentElement.cloneNode(false);
     matched.forEach((g) => { g.classList.add('region'); svgEl.appendChild(g); });
@@ -143,7 +182,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     el.map.classList.remove('is-zoomed');
     state.zoomedRegion = null;
     state.selectedId = null;
+    state.sigunguIds = null;
     hideLabel(true);
+    closeDropup();
     mapScale = 1;
     if (el.mapBack) el.mapBack.hidden = true;
   }
@@ -220,19 +261,36 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
           state.selectedId = null;
           showLabel(region.id);
         } else {
-          $$('.region.is-selected', el.mapBg).forEach((r) => r.classList.remove('is-selected'));
-          region.classList.add('is-selected');
-          state.selectedId = region.id;
-          showLabel(region.id);
+          selectRegionInDropup(region.id);
         }
       });
     }
+
+    /* 라벨 클릭 → 드롭업 열고 닫기 (전체 지도: 시/도 목록, 확대 중: 시/군/구 목록) */
+    if (el.labelBtn) {
+      el.labelBtn.addEventListener('click', () => {
+        if (el.dropup.classList.contains('is-open')) closeDropup();
+        else openDropup();
+      });
+    }
+    if (el.dropup) {
+      el.dropup.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-id]');
+        if (!btn) return;
+        if (btn.dataset.key === 'sido') zoomToRegion(btn.dataset.id);
+        else selectRegionInDropup(btn.dataset.id);
+        closeDropup();
+      });
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#mapLabel')) closeDropup();
+    });
 
     /* 지도 휠 확대/축소 (마우스 커서 기준, 시/도 확대 중엔 비활성) */
     if (el.map) {
       const zoomTargets = [$('.map__bg', el.map), el.markers].filter(Boolean);
       el.map.addEventListener('wheel', (e) => {
-        if (state.zoomedRegion) return;
+        if (state.zoomedRegion || e.target.closest('#mapLabel')) return;
         e.preventDefault();
         const rect = el.map.getBoundingClientRect();
         const originX = ((e.clientX - rect.left) / rect.width) * 100;
