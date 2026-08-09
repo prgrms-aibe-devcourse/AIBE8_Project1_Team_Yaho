@@ -652,15 +652,7 @@ body {
   gap: 9px;
   margin: 10px 5px 0;
 }
-.stat {
-  /* display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  border: 1px solid #e6eef6;
-  border-radius: 10px;
-  background: #fff; */
-}
+
 .stat .ico { width: 21px; height: 21px; stroke-width: 1.5; }
 .stat > div { min-width: 0; display: flex; flex-direction: column; }
 .stat__label { color: var(--ink-500); font-size: 10.5px; }

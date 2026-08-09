@@ -70,6 +70,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     const items = state.zoomedRegion
       ? (state.sigunguIds || []).map((id) => ({ id, name: (bjdCodes && bjdCodes.sigungu[id]) || id, key: 'sigungu' }))
       : REGIONS.map((r) => ({ id: r.id, name: r.label, key: 'sido' }));
+    items.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     el.dropup.innerHTML = items
       .map((it) => `<li role="option"><button type="button" data-key="${it.key}" data-id="${it.id}">${it.name}</button></li>`)
       .join('');
