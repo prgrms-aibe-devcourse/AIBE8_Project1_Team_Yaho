@@ -138,6 +138,15 @@
         <div class="block__head block__head--pad">
           <h2 class="block__title">이런 여행지 어때요?</h2>
         </div>
+        <ul class="filter-row" id="categoryFilter">
+          <li><button class="chip chip--filter is-active" type="button" data-cat="전체">전체</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="자연">자연</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="역사">역사</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="체험">체험</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="레저">레저</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="쇼핑">쇼핑</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="숙박">숙박</button></li>
+        </ul>
         <ul class="spot-grid" id="spotGrid"></ul>
       </section>
 
@@ -199,8 +208,11 @@
       </article>
 
       <button class="btn btn--primary btn--cta" type="button" id="btnGo">
-        <svg class="ico"><use href="#i-send"/></svg> 이 여행지로 떠나기</svg>
+        <svg class="ico"><use href="#i-route"/></svg> 길찾기
       </button>
+      <a class="btn btn--outline btn--cta" href="#" id="linkDetail">
+        <svg class="ico"><use href="#i-search"/></svg> 여행지 상세정보
+      </a>
 
       <div class="block__head block__head--pad">
         <h2 class="block__title">내 여행 기록</h2>

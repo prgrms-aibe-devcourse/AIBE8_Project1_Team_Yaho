@@ -131,6 +131,13 @@ body {
   border-radius: 12px;
 }
 
+.btn--outline {
+  background: #fff;
+  color: var(--blue-600);
+  border: 1.5px solid var(--blue-200, var(--blue-500));
+}
+.btn--outline:hover { background: var(--blue-50); }
+
 .icon-btn {
   position: relative;
   display: grid;
@@ -190,6 +197,20 @@ body {
 .chip--geo:hover { background: var(--blue-100); color: var(--blue-700); }
 .chip--geo.is-off { background: #f1f5f9; color: var(--ink-500); }
 .chip--geo.is-off .ico { color: var(--ink-400); }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 9px 0 12px;
+}
+.chip--filter {
+  cursor: pointer;
+  transition: background-color .18s var(--ease), color .18s var(--ease);
+}
+.chip--filter:hover { background: var(--blue-100); }
+.chip--filter.is-active { background: var(--blue-500); color: #fff; }
+.chip--filter.is-active .ico { color: #fff; }
 
 /* --- 블록 헤더 --- */
 .block { padding-top: 15px; }
@@ -411,11 +432,13 @@ body {
 .origin__select[aria-expanded="true"] .ico--chevron { transform: rotate(90deg); }
 .origin__select .ico--chevron { transition: transform .2s var(--ease); }
 
+/* 사이드바 폭에 안 잘리도록 position: fixed로 버튼 오른쪽에 띄움 (JS가 open 시 left/top 계산) */
 .origin__list {
-  position: absolute;
-  inset: calc(100% + 6px) 0 auto;
-  z-index: 20;
-  max-height: 216px;
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  max-height: 320px;
+  margin: 0;
   padding: 5px;
   overflow-y: auto;
   border: 1px solid var(--line-2);
@@ -423,15 +446,23 @@ body {
   background: #fff;
   box-shadow: var(--sh-3);
 }
-.origin__list li {
+.origin__list li + li { margin-top: 1px; }
+.origin__list button {
+  display: block;
+  width: 100%;
   padding: 9px 11px;
+  border: none;
   border-radius: 8px;
+  background: none;
+  color: var(--ink-800);
+  font: inherit;
   font-size: 13.5px;
+  text-align: left;
   cursor: pointer;
   transition: background-color .14s var(--ease);
 }
-.origin__list li:hover { background: var(--blue-50); }
-.origin__list li[aria-selected="true"] { color: var(--blue-600); font-weight: 700; background: var(--blue-50); }
+.origin__list button:hover { background: var(--blue-50); }
+.origin__list-back { color: var(--ink-500) !important; font-weight: 600; }
 
 .chip--geo { margin-top: 9px; }
 
@@ -656,7 +687,7 @@ body {
 .stat .ico { width: 21px; height: 21px; stroke-width: 1.5; }
 .stat > div { min-width: 0; display: flex; flex-direction: column; }
 .stat__label { color: var(--ink-500); font-size: 10.5px; }
-.stat__value { font-size: 13px; font-weight: 700; letter-spacing: -.02em; }
+.stat__value { font-size: 13px; font-weight: 700; letter-spacing: -.02em;}
 
 /* --- 교통 정보 --- */
 .fares { display: flex; flex-direction: column; gap: 9px; }

@@ -1,7 +1,7 @@
 /* ============================================================
    main.js — 화면 렌더링 & 인터랙션
    ============================================================ */
-import { ORIGINS, TRANSPORTS, DESTINATIONS, POPULAR, THEMES } from './data.js';
+import { TRANSPORTS, DESTINATIONS, POPULAR, THEMES } from './data.js';
 import { initMap } from './map.js';
 
 (function () {
@@ -20,7 +20,8 @@ import { initMap } from './map.js';
   const state = {
     destId: 'gangneung',
     transport: 'car',
-    origin: ORIGINS[0],
+    origin: '서울특별시 강남구',
+    originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
     useGeo: true,
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
@@ -31,11 +32,22 @@ import { initMap } from './map.js';
     recordJournals: 2,
   };
 
+  /* ---------- 출발지 드롭업 (시/도 → 시/군/구) ---------- */
+  let bjdCodes = null;
+  fetch('data/bjd-codes.json')
+    .then((res) => res.json())
+    .then((data) => { bjdCodes = data; })
+    .catch((err) => console.error('법정동 코드 로드 실패:', err));
+
+  let originLevel = 'sido';   /* 'sido' | 'sigungu' */
+  let originSidoPick = null;  /* 시군구 목록 조회 중인 시/도 코드 */
+
   /* ---------- DOM ---------- */
   const el = {
     transportList: $('#transportList'),
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
+    categoryFilter: $('#categoryFilter'),
     markers:       $('#markers'),
     mapTip:        $('#mapTip'),
     fareList:      $('#fareList'),
@@ -130,10 +142,39 @@ import { initMap } from './map.js';
       </li>`).join('');
   }
 
-  /* --- 출발지 목록 --- */
-  function renderOrigins() {
-    el.originList.innerHTML = ORIGINS.map((o) => `
-      <li role="option" data-origin="${o}" aria-selected="${o === state.origin}">${o}</li>`).join('');
+  /* --- 출발지 드롭업 (시/도 목록 또는 선택된 시/도의 시/군/구 목록) --- */
+  function renderOriginDropup() {
+    if (!el.originList || !bjdCodes) return;
+
+    const items = originLevel === 'sigungu'
+      ? Object.keys(bjdCodes.sigungu)
+          .filter((id) => id.startsWith(originSidoPick))
+          .map((id) => ({ id, name: bjdCodes.sigungu[id] }))
+      : Object.keys(bjdCodes.sido).map((id) => ({ id, name: bjdCodes.sido[id] }));
+    items.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+    const back = originLevel === 'sigungu'
+      ? '<li><button type="button" class="origin__list-back" data-back="1">‹ 시/도 다시 선택</button></li>'
+      : '';
+    el.originList.innerHTML = back + items
+      .map((it) => `<li role="option"><button type="button" data-id="${it.id}">${it.name}</button></li>`)
+      .join('');
+  }
+
+  function openOriginDropup() {
+    originLevel = 'sido';
+    originSidoPick = null;
+    renderOriginDropup();
+    const rect = el.originSelect.getBoundingClientRect();
+    el.originList.style.left = `${rect.right + 10}px`;
+    el.originList.style.top  = `${rect.top}px`;
+    el.originSelect.setAttribute('aria-expanded', 'true');
+    el.originList.hidden = false;
+  }
+
+  function closeOriginDropup() {
+    el.originSelect.setAttribute('aria-expanded', 'false');
+    el.originList.hidden = true;
   }
 
   /* --- 교통 정보 (해당 여행지에서 이용 가능한 수단만) --- */
@@ -189,12 +230,15 @@ import { initMap } from './map.js';
       el.myRecord.innerHTML = `
         <ul>
           <li>
-            <span class="emoji">🏷️</span>
-            <span class>여행 스탬프</span><strong class="stat__value">${state.recordStamps}개</strong>
+            <span>
+            <span class="emoji">🏷️ </span>
+            <span class>여행 스탬프 </span>
+            <strong class="stat__value">${state.recordStamps}개</strong>
+            </span>
           </li>
           <li class>
-            <span class="emoji">📖</span>
-            <span>여행일지</span><strong class="stat__value">${state.recordJournals}개</strong>
+            <span class="emoji">📖 </span>
+            <span>여행일지 </span><strong class="stat__value">${state.recordJournals}개</strong>
           </li>
         </ul>
         <button class="my-record__btn" type="button" id="btnRecordView">기록 보러가기</button>`;
@@ -327,6 +371,16 @@ import { initMap } from './map.js';
       });
     }
 
+    /* 카테고리 필터 칩 (TourAPI cat1 연동 전까지는 활성 표시만 전환) */
+    if (el.categoryFilter) {
+      el.categoryFilter.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-cat]');
+        if (!chip) return;
+        $$('.chip--filter', el.categoryFilter).forEach((c) => c.classList.remove('is-active'));
+        chip.classList.add('is-active');
+      });
+    }
+
     /* 인기 지역 · 인기 여행지 그리드 · 테마 카드 · 지도 마커 */
     [el.popularList, el.spotGrid, el.themeTrack, el.markers].filter(Boolean).forEach((root) => {
       root.addEventListener('click', (e) => {
@@ -392,29 +446,43 @@ import { initMap } from './map.js';
       showToast(n ? `🔖 찜한 여행지 ${n}곳` : '아직 찜한 여행지가 없어요');
     });
 
-    /* 출발지 드롭다운 */
+    /* 출발지 드롭업 (시/도 → 시/군/구) */
     el.originSelect.addEventListener('click', () => {
       const open = el.originSelect.getAttribute('aria-expanded') === 'true';
-      el.originSelect.setAttribute('aria-expanded', String(!open));
-      el.originList.hidden = open;
+      if (open) closeOriginDropup();
+      else openOriginDropup();
     });
 
     el.originList.addEventListener('click', (e) => {
-      const li = e.target.closest('[data-origin]');
-      if (!li) return;
-      state.origin = li.dataset.origin;
+      const backBtn = e.target.closest('[data-back]');
+      if (backBtn) {
+        originLevel = 'sido';
+        originSidoPick = null;
+        renderOriginDropup();
+        return;
+      }
+
+      const btn = e.target.closest('button[data-id]');
+      if (!btn || !bjdCodes) return;
+
+      if (originLevel === 'sido') {
+        originSidoPick = btn.dataset.id;
+        originLevel = 'sigungu';
+        renderOriginDropup();
+        return;
+      }
+
+      const sidoName = bjdCodes.sido[originSidoPick] || '';
+      const sigunguName = bjdCodes.sigungu[btn.dataset.id] || '';
+      state.origin = `${sidoName} ${sigunguName}`;
+      state.originId = btn.dataset.id;
       el.originLabel.textContent = state.origin;
-      renderOrigins();
-      el.originSelect.setAttribute('aria-expanded', 'false');
-      el.originList.hidden = true;
+      closeOriginDropup();
       showToast(`출발지를 ${state.origin}로 변경했어요`);
     });
 
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.origin')) {
-        el.originSelect.setAttribute('aria-expanded', 'false');
-        el.originList.hidden = true;
-      }
+      if (!e.target.closest('.origin')) closeOriginDropup();
     });
 
     /* 내 위치 사용 */
@@ -438,8 +506,7 @@ import { initMap } from './map.js';
     /* ESC — 열린 것 닫기 */
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      el.originSelect.setAttribute('aria-expanded', 'false');
-      el.originList.hidden = true;
+      closeOriginDropup();
       el.mapTip.hidden = true;
     });
   }
@@ -451,7 +518,6 @@ import { initMap } from './map.js';
     renderPopular();
     renderSpotGrid();
     renderThemes();
-    renderOrigins();
     el.originLabel.textContent = state.origin;
 
     selectDestination(state.destId, { toast: false });
