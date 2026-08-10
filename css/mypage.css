@@ -1,0 +1,35 @@
+/* ============================================================
+   mypage.css - mypage.html 전용 스타일
+   ============================================================ */
+
+.profile-hero{ display:flex; gap: 22px; align-items:center; margin-bottom: 30px; }
+.profile-hero h3{ font-size: 19px; font-weight: 800; margin:0; }
+
+/* .outline-btn 기본 스타일은 style.css(공통)에 있고, 크기만 여기서 조정 */
+.outline-btn.small{ padding: 6px 14px; font-size: 12.5px; }
+
+.info-panel{
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 6px 26px;
+}
+.info-row{
+  display:flex; align-items:center; gap: 18px; padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.info-row:last-child{ border-bottom:none; }
+.info-label{ width: 70px; flex-shrink:0; color: var(--text-muted); font-size: 14px; font-weight:500;}
+.info-value-input{
+  flex:1; border: none; background: transparent; font-size: 15px; font-weight: 600; padding: 4px 0;
+  color: var(--text-main); outline:none;
+}
+.info-value-input:not(:disabled){
+  border-bottom: 1.5px solid var(--indigo); background: #f7f9ff;
+  padding: 6px 10px; border-radius: 6px;
+}
+.chip-btn{
+  border:none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 700; color:#fff;
+  flex-shrink:0;
+}
+.chip-blue{ background: #d7e6f8; color: var(--blue-mid); }
+.chip-blue.is-save{ background: linear-gradient(100deg,#2452b0,#3f80cf); color:#fff; }
+.chip-orange{ background: var(--orange); color:#fff; }

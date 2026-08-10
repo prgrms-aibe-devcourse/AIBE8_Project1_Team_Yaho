@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사이트 이름 | 북마크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/bookmark.css">
+</head>
+<body data-page="bookmark">
+
+<div id="page-app" class="page app-page">
+
+  <div id="app-topnav"></div>
+
+  <div class="app-body">
+    <div id="app-sidebar"></div>
+
+    <main class="content">
+      <div class="view-header-row">
+        <div>
+          <h2 class="view-title">북마크</h2>
+          <p class="muted">찜해둔 장소들을 대표 사진으로 모아봤어요</p>
+        </div>
+      </div>
+
+      <!--
+        지금은 임시 사진(placeholder)으로 채워져 있습니다.
+        나중에 API 연동 시 bookmark.js 의 BOOKMARK_ITEMS 배열을
+        API에서 받아온 대표 이미지 목록으로 교체하면 됩니다.
+        카드는 사진만 보여주는 라운드(10px) 정사각형 형태입니다.
+      -->
+      <div class="bookmark-grid" id="bookmark-grid"></div>
+      <p class="empty-state" id="bookmark-empty" hidden>아직 북마크한 장소가 없어요.</p>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/app.js"></script>
+<script src="./js/topnav.js"></script>
+<script src="./js/sidebar.js"></script>
+<script src="./js/bookmark.js"></script>
+</body>
+</html>

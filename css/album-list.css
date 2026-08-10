@@ -1,0 +1,48 @@
+/* ============================================================
+   album-list.css - album.html 전용 스타일
+   (색상 팝오버/스와치 자체는 style.css 공통으로 옮겼음 - album-edit도 같이 씀)
+   ============================================================ */
+
+.album-grid{
+  display:grid; grid-template-columns: repeat(3, 1fr); gap: 26px 22px;
+}
+.album-card-wrap{ display:flex; flex-direction:column; cursor:pointer; position:relative; }
+.album-card{
+  border: 2px solid #171923; border-radius: 12px; overflow:hidden;
+  display:flex; flex-direction:column; height: 190px; position:relative;
+  transition: transform .12s;
+}
+.album-card-wrap:hover .album-card{ transform: translateY(-3px); }
+.album-band-top{ flex: 0 0 62%; }
+.album-band-mid{
+  flex: 0 0 26%; background:#fff; display:flex; flex-direction:column;
+  justify-content:center; padding: 0 16px; position:relative;
+}
+.album-band-mid::before, .album-band-mid::after{
+  content:''; position:absolute; top:0; bottom:0; width: 6px; background:#171923;
+}
+.album-band-mid::before{ right: 34px; }
+.album-band-mid::after{ right: 22px; }
+.album-band-bot{ flex: 0 0 12%; }
+.album-planner-title{ font-weight: 800; font-size: 15.5px; }
+.album-planner-sub{ font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.album-date-caption{ font-size: 12.5px; color: var(--text-muted); margin: 10px 2px 0; }
+.album-delete-x{
+  position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
+  background: rgba(255,255,255,0.85); border:none; font-size: 13px; line-height:22px;
+  color: var(--danger); font-weight: 700; z-index:2;
+}
+
+/* 앨범 카드 색상 선택 버튼 (좌상단 동그란 스와치) */
+.album-color-btn{
+  position:absolute; top:6px; left:6px; width:22px; height:22px; border-radius:50%;
+  border: 2px solid rgba(255,255,255,0.85); z-index:2; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.album-color-btn:hover{ transform: scale(1.1); }
+
+@media (max-width: 900px){
+  .album-grid{ grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 560px){
+  .album-grid{ grid-template-columns: 1fr; }
+}
