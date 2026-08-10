@@ -22,7 +22,7 @@ import { initMap } from './map.js';
     transport: 'car',
     origin: '서울특별시 강남구',
     originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
-    useGeo: true,
+    useGeo: JSON.parse(localStorage.getItem('wtg:useGeo') || 'false'),
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
     themeIndex: 0,
@@ -41,6 +41,45 @@ import { initMap } from './map.js';
 
   let originLevel = 'sido';   /* 'sido' | 'sigungu' */
   let originSidoPick = null;  /* 시군구 목록 조회 중인 시/도 코드 */
+
+  /* --- 지오코딩 결과 캐시 (localStorage, TTL 10분) — 껐다 켜거나 새로고침해도 재호출 방지 --- */
+  const GEO_TTL_MS = 10 * 60 * 1000;
+  function getGeoCache() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('wtg:geo') || 'null');
+      if (!cached || Date.now() - cached.ts > GEO_TTL_MS) return null;
+      return cached;
+    } catch { return null; }
+  }
+  function setGeoCache(origin, originId) {
+    localStorage.setItem('wtg:geo', JSON.stringify({ origin, originId, ts: Date.now() }));
+  }
+  function setUseGeo(on) {
+    state.useGeo = on;
+    localStorage.setItem('wtg:useGeo', JSON.stringify(on));
+    el.btnGeo.classList.toggle('is-off', !on);
+    el.geoLabel.textContent = on ? '내 위치 사용 중' : '내 위치 사용 안 함';
+  }
+
+  /* --- 새로고침 후 "내 위치 사용 중" 상태 복원 --- */
+  function restoreGeoState() {
+    if (!state.useGeo) return;
+    const cached = getGeoCache();
+    if (cached) {
+      state.origin = cached.origin;
+      state.originId = cached.originId;
+      el.originLabel.textContent = state.origin;
+      setUseGeo(true);
+      return;
+    }
+    if (!navigator.geolocation) { setUseGeo(false); return; }
+    el.geoLabel.textContent = '위치 확인 중…';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
+      () => setUseGeo(false),
+      { maximumAge: GEO_TTL_MS }
+    );
+  }
 
   /* ---------- DOM ---------- */
   const el = {
@@ -175,6 +214,47 @@ import { initMap } from './map.js';
   function closeOriginDropup() {
     el.originSelect.setAttribute('aria-expanded', 'false');
     el.originList.hidden = true;
+  }
+
+  /* --- 좌표 → 시/도·시/군/구 (네이버 리버스 지오코딩 + bjd-codes 매칭) --- */
+  function resolveOriginFromCoords(lat, lng) {
+    if (!window.naver || !naver.maps.Service) {
+      showToast('지도 API 로드에 실패했어요');
+      setUseGeo(false);
+      return;
+    }
+    naver.maps.Service.reverseGeocode(
+      {
+        coords: new naver.maps.LatLng(lat, lng),
+        orders: [naver.maps.Service.OrderType.ADDR].join(','),
+      },
+      (status, res) => {
+        if (status !== naver.maps.Service.Status.OK) {
+          showToast('위치를 주소로 변환하지 못했어요');
+          setUseGeo(false);
+          return;
+        }
+        const region = res.v2.results[0]?.region;
+        const sidoName = region?.area1?.name;
+        const sigunguName = region?.area2?.name;
+        if (!sidoName || !bjdCodes) {
+          showToast('지역을 특정하지 못했어요');
+          setUseGeo(false);
+          return;
+        }
+        const sidoId = Object.keys(bjdCodes.sido).find((id) => bjdCodes.sido[id] === sidoName);
+        const sigunguId = sidoId && sigunguName
+          ? Object.keys(bjdCodes.sigungu).find((id) => id.startsWith(sidoId) && bjdCodes.sigungu[id] === sigunguName)
+          : null;
+
+        state.origin = sigunguName ? `${sidoName} ${sigunguName}` : sidoName;
+        state.originId = sigunguId || sidoId || null;
+        setGeoCache(state.origin, state.originId);
+        setUseGeo(true);
+        el.originLabel.textContent = state.origin;
+        showToast(`출발지를 ${state.origin}로 설정했어요`);
+      }
+    );
   }
 
   /* --- 교통 정보 (해당 여행지에서 이용 가능한 수단만) --- */
@@ -457,6 +537,12 @@ import { initMap } from './map.js';
     });
 
     el.originList.addEventListener('click', (e) => {
+      /* renderOriginDropup()이 innerHTML을 통째로 새로 그려서 클릭된 버튼이 DOM에서
+         떨어져 나감 — 이 클릭이 document의 "바깥 클릭 감지" 리스너까지 버블링되면
+         e.target.closest('.origin')이 null이 되어 방금 고른 시/도 목록이 그 자리에서
+         바로 닫혀버림. 여기서 막아서 바깥 클릭 리스너가 이 클릭을 보지 못하게 함 */
+      e.stopPropagation();
+
       const backBtn = e.target.closest('[data-back]');
       if (backBtn) {
         originLevel = 'sido';
@@ -488,11 +574,37 @@ import { initMap } from './map.js';
       if (!e.target.closest('.origin')) closeOriginDropup();
     });
 
-    /* 내 위치 사용 */
+    /* 내 위치 사용 — geolocation → 네이버 리버스 지오코딩으로 시/군/구 특정
+       - localStorage 캐시(TTL 10분): 껐다 켜거나 새로고침해도 만료 전이면 API 재호출 안 함
+       - maximumAge: 브라우저가 최근 측위 결과 있으면 GPS 재측위 자체를 스킵
+       - 버튼 눌렀을 때만 호출 (자동 갱신 없음) */
     el.btnGeo.addEventListener('click', () => {
-      state.useGeo = !state.useGeo;
-      el.btnGeo.classList.toggle('is-off', !state.useGeo);
-      el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
+      if (state.useGeo) {
+        setUseGeo(false);
+        return;
+      }
+      const cached = getGeoCache();
+      if (cached) {
+        state.origin = cached.origin;
+        state.originId = cached.originId;
+        el.originLabel.textContent = state.origin;
+        setUseGeo(true);
+        showToast(`출발지를 ${state.origin}로 설정했어요`);
+        return;
+      }
+      if (!navigator.geolocation) {
+        showToast('이 브라우저는 위치 정보를 지원하지 않아요');
+        return;
+      }
+      el.geoLabel.textContent = '위치 확인 중…';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
+        () => {
+          showToast('위치 권한이 거부됐어요');
+          el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
+        },
+        { maximumAge: GEO_TTL_MS }
+      );
     });
 
     /* 캐러셀 */
@@ -522,6 +634,7 @@ import { initMap } from './map.js';
     renderSpotGrid();
     renderThemes();
     el.originLabel.textContent = state.origin;
+    restoreGeoState();
 
     selectDestination(state.destId, { toast: false });
     renderSavedCount();

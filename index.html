@@ -113,7 +113,6 @@
       <section class="block">
         <div class="block__head">
           <h2 class="block__title">출발지 설정 <svg class="ico ico--pin"><use href="#i-pin"/></svg></h2>
-          <button class="ghost-btn" type="button" aria-label="출발지 상세 설정"><svg class="ico"><use href="#i-gear"/></svg></button>
         </div>
 
         <div class="origin">
@@ -124,8 +123,8 @@
           <ul class="origin__list" id="originList" role="listbox" hidden></ul>
         </div>
 
-        <button class="chip chip--geo" type="button" id="btnGeo">
-          <svg class="ico"><use href="#i-target"/></svg><span id="geoLabel">내 위치 사용 중</span>
+        <button class="chip chip--geo is-off" type="button" id="btnGeo">
+          <svg class="ico"><use href="#i-target"/></svg><span id="geoLabel">내 위치 사용 안 함</span>
         </button>
       </section>
 
@@ -231,6 +230,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=yaueu35tew&submodules=geocoder"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
