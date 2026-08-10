@@ -12,6 +12,81 @@
 
   var FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1200&h=700&fit=crop&auto=format';
 
+  // ── 북마크(저장) ─────────────────────────────────────────────────────
+  // bookmark.html의 bookmark.js와 localStorage 키를 공유해서, 여기서 저장한
+  // {id, image, link}가 북마크 페이지의 그리드에 그대로 뜨도록 합니다.
+  var BOOKMARK_KEY = 'travelBookmarks_v1';
+
+  function getBookmarks() {
+    try {
+      var raw = localStorage.getItem(BOOKMARK_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setBookmarks(list) {
+    try {
+      localStorage.setItem(BOOKMARK_KEY, JSON.stringify(list));
+    } catch (e) {
+      // 저장 실패(용량 초과 등)는 무시
+    }
+  }
+
+  function isBookmarked(id) {
+    return getBookmarks().some(function (b) { return String(b.id) === String(id); });
+  }
+
+  // 이미 저장돼 있으면 제거, 아니면 추가 (토글). 반환값 = 토글 후 저장 여부
+  function toggleBookmark(id, image, link) {
+    var list = getBookmarks();
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(id)) { idx = i; break; }
+    }
+    if (idx > -1) {
+      list.splice(idx, 1);
+      setBookmarks(list);
+      return false;
+    }
+    list.unshift({ id: id, image: image, link: link });
+    setBookmarks(list);
+    return true;
+  }
+
+  // detail.html에는 app.js의 toast()가 없으므로 여기서 간단히 자체 구현
+  function showToast(msg) {
+    var el = document.getElementById('detail-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'detail-toast';
+      el.style.cssText =
+        'position:fixed; bottom:34px; left:50%; transform:translateX(-50%) translateY(20px);' +
+        'background:#1e2430; color:#fff; padding:12px 22px; border-radius:100px;' +
+        'font-size:13.5px; font-weight:600; opacity:0; pointer-events:none;' +
+        'transition:all .25s; z-index:999;';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    el.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(el._toastTimer);
+    el._toastTimer = setTimeout(function () {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 2200);
+  }
+
+  // 지금 보고 있는 상세 페이지로 돌아올 수 있는 링크 (postList.js의 detailLink()와 동일한 형태)
+  function buildSelfLink() {
+    var url = 'detail.html?id=' + contentId + '&type=' + contentTypeId;
+    if (isFestival) {
+      url += '&start=' + encodeURIComponent(eventStart) + '&end=' + encodeURIComponent(eventEnd);
+    }
+    return url;
+  }
+
   if (!contentId) {
     renderNotFound();
     return;
@@ -180,7 +255,7 @@
       '<div class="detail-meta-row">' +
         '<div class="detail-tags"></div>' +
         '<div class="detail-actions">' +
-          '<button class="action-btn">🔖 저장</button>' +
+          '<button class="action-btn" id="save-bookmark-btn">🔖 저장</button>' +
           '<button class="action-btn">↗️ 공유</button>' +
         '</div>' +
       '</div>' +
@@ -216,6 +291,21 @@
         btn.textContent = isExpanded ? '접기' : '더 보기';
       });
     });
+
+    // ── 저장(북마크) 버튼 ────────────────────────────────────────────
+    var saveBtn = document.getElementById('save-bookmark-btn');
+    if (saveBtn) {
+      var refreshSaveBtnLabel = function () {
+        saveBtn.textContent = isBookmarked(contentId) ? '🔖 저장됨' : '🔖 저장';
+      };
+      refreshSaveBtnLabel();
+
+      saveBtn.addEventListener('click', function () {
+        var nowSaved = toggleBookmark(contentId, heroImage, buildSelfLink());
+        refreshSaveBtnLabel();
+        showToast(nowSaved ? '북마크에 저장했습니다' : '북마크에서 제거했습니다');
+      });
+    }
   }
 
   function travelInfoItems(intro, common) {
