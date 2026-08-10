@@ -1,0 +1,37 @@
+/* ============================================================
+   bookmark.css - bookmark.html 전용 스타일
+   --------------------------------------------------------------
+   카드는 텍스트 없이 "사진만" 보여주는 라운드(10px) 정사각형 형태.
+   나중에 API로 대표 이미지만 받아와도 이 카드 모양을 그대로 쓰면 된다.
+   ============================================================ */
+
+.bookmark-grid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.bookmark-card{
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background: #e7edf3;
+  box-shadow: 0 6px 16px -8px rgba(20,50,90,0.25);
+  transition: transform .12s;
+}
+.bookmark-card:hover{ transform: translateY(-3px); }
+.bookmark-card img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 900px){
+  .bookmark-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px){
+  .bookmark-grid{ grid-template-columns: repeat(2, 1fr); }
+}

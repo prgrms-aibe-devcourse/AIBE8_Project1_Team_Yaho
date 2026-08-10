@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사이트 이름 | 앨범 상세</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/album-detail.css">
+</head>
+<body data-page="album-detail">
+
+<div id="page-app" class="page app-page">
+
+  <div id="app-topnav"></div>
+
+  <div class="app-body">
+    <div id="app-sidebar"></div>
+
+    <main class="content">
+      <button class="back-link" id="back-to-list-btn">← 앨범 목록으로</button>
+
+      <div class="detail-header">
+        <h2 class="view-title" id="detail-title">여행 제목</h2>
+        <div class="detail-badges">
+          <span class="stamp" id="detail-stamp">COMPLETED</span>
+          <span class="days-badge" id="detail-days">3일 여행</span>
+        </div>
+      </div>
+
+      <!-- 상세 페이지는 읽기 전용입니다. 기록 추가/수정/삭제, 앨범 삭제는
+           모두 album-edit.html 에서만 할 수 있습니다. -->
+      <div class="entries-list" id="entries-list"></div>
+      <p class="empty-state" id="entries-empty" hidden>아직 기록이 없어요. 수정하기에서 사진과 일기를 추가해보세요!</p>
+
+      <!-- id는 JS에서 현재 앨범 id를 붙여 채워줍니다 -->
+      <a class="outline-btn" id="detail-edit-link" href="album-edit.html">✏️ 이 앨범 수정하기</a>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/app.js"></script>
+<script src="./js/topnav.js"></script>
+<script src="./js/sidebar.js"></script>
+<script src="./js/album.js"></script>
+</body>
+</html>

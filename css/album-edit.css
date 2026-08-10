@@ -1,0 +1,92 @@
+/* ============================================================
+   album-edit.css - album-edit.html 전용 스타일
+   (색상 팝오버/스와치는 style.css 공통 - album-list 카드도 같이 씀)
+   ============================================================ */
+
+.title-input{
+  width:100%; font-size: 22px; font-weight: 800; padding: 16px 18px;
+  border: 1.5px solid #dde4ec; border-radius: var(--radius-sm); margin-bottom: 18px; outline:none;
+}
+.title-input:focus{ border-color: var(--indigo); }
+.field-box{
+  display:flex; align-items:center; gap: 10px; padding: 14px 18px;
+  border: 1.5px solid #dde4ec; border-radius: var(--radius-sm); margin-bottom: 18px;
+  color: var(--indigo);
+}
+.field-box svg{ flex-shrink:0; }
+.date-input, .plain-input{
+  border:none; outline:none; font-size: 14px; color: var(--text-main); background:transparent; flex:1;
+}
+.tilde{ color: var(--text-muted); }
+
+.entry-form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+.dropzone{
+  border: 1.5px dashed #cfd8e3; border-radius: var(--radius-sm); min-height: 240px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background: #fafbfd; overflow:hidden;
+}
+.dz-content{ display:flex; flex-direction:column; align-items:center; gap:8px; color: var(--text-muted); font-size: 13.5px; }
+.dz-plus{ font-size: 26px; color: #b7c1cd; font-weight: 300; }
+.dropzone img{ width:100%; height:100%; object-fit:cover; }
+.diary-box{
+  border: 1.5px solid #dde4ec; border-radius: var(--radius-sm); min-height: 240px; padding: 16px;
+  display:flex; flex-direction:column;
+}
+.diary-label{ display:flex; align-items:center; gap:6px; font-size: 13.5px; font-weight:700; margin-bottom: 10px; color: var(--indigo); }
+.diary-box textarea{
+  flex:1; border:none; outline:none; resize:none; font-size: 13.5px; line-height:1.6; color: var(--text-main);
+}
+.add-content-btn{
+  width:100%; padding: 15px; border: 1.5px solid #bcd4ea; border-radius: var(--radius-sm);
+  background: #fafcfe; color: var(--indigo); font-weight: 700; font-size: 14px; margin-bottom: 14px;
+}
+.add-content-btn:hover{ background:#eef5fb; }
+
+.form-section-title{
+  font-size: 14px; font-weight: 800; margin: 30px 0 14px; color: var(--text-main);
+}
+.form-section-title:first-of-type{ margin-top: 0; }
+.color-field{ display:flex; align-items:center; gap: 14px; margin-bottom: 18px; }
+.color-field .color-swatch{ width: 30px; height: 30px; }
+.color-field .custom-color-wrap{ margin:0; }
+
+.existing-entries{ display:flex; flex-direction:column; gap: 12px; margin-bottom: 10px; }
+.existing-entry-row{
+  display:flex; gap: 14px; align-items:flex-start; border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.existing-entry-row img{
+  width: 72px; height: 72px; border-radius: 10px; object-fit:cover; flex-shrink:0; background:#eef2f6;
+}
+.existing-entry-row textarea{
+  flex:1; border: 1.5px solid #e3e8ee; border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  line-height:1.6; resize:vertical; min-height: 72px; outline:none;
+}
+.existing-entry-row textarea:focus{ border-color: var(--indigo); }
+
+/* 기존 기록의 "삭제" 버튼 (album-edit 에서만 삭제가 가능하도록 여기에만 존재) */
+.delete-btn{
+  align-self:flex-end; margin-top: 12px; background: var(--danger); color:#fff; border:none;
+  border-radius: 8px; padding: 7px 16px; font-size: 12.5px; font-weight:700;
+}
+.delete-btn:hover{ filter:brightness(1.08); }
+
+.save-btn{
+  width:100%; padding: 15px; border:none; border-radius: var(--radius-sm);
+  background: linear-gradient(100deg, var(--navy-dark), var(--blue-mid)); color:#fff;
+  font-weight: 700; font-size: 14.5px; margin: 24px 0 14px;
+  box-shadow: 0 12px 24px -10px rgba(30,58,95,0.5);
+}
+.save-btn:hover{ filter: brightness(1.05); }
+
+.danger-btn{
+  width:100%; padding: 13px; border: 1.5px solid var(--danger); border-radius: var(--radius-sm);
+  background: #fff; color: var(--danger); font-weight: 700; font-size: 13.5px;
+}
+.danger-btn:hover{ background: #fdf1f0; }
+
+.edit-divider{ border:none; border-top: 1px solid var(--line); margin: 30px 0; }
+
+@media (max-width: 900px){
+  .entry-form-grid{ grid-template-columns: 1fr; }
+}

@@ -1,0 +1,41 @@
+/* ============================================================
+   login.css - login.html 전용 스타일
+   ============================================================ */
+
+.login-page{
+  display:flex; align-items:center; justify-content:center;
+  min-height:100vh; padding: 40px 20px;
+}
+.login-card{
+  background: var(--card-bg);
+  width: 100%; max-width: 660px;
+  border-radius: var(--radius-lg);
+  padding: 56px 64px 64px;
+  box-shadow: 0 30px 60px -20px rgba(20,50,90,0.25);
+}
+.login-title{ font-size: 30px; font-weight: 900; margin: 0 0 10px; }
+.login-sub{ color: var(--text-muted); margin: 0 0 34px; font-size: 14px; }
+.field-label{ display:block; font-size: 13px; color: var(--text-main); margin-bottom: 8px; font-weight: 500; }
+.text-input{
+  width: 100%; padding: 14px 16px; margin-bottom: 24px;
+  border: 1.5px solid #bcd4ea; border-radius: var(--radius-sm);
+  font-size: 14px; background: #fafcfe; outline: none;
+  transition: border-color .15s;
+}
+.text-input:focus{ border-color: var(--indigo); }
+
+.btn-gradient{
+  background: linear-gradient(100deg, var(--navy-dark), var(--blue-mid));
+  color: #fff; border:none; border-radius: var(--radius-sm);
+  box-shadow: 0 12px 24px -8px rgba(30,58,95,0.5);
+}
+.btn-gradient:hover{ filter: brightness(1.06); }
+
+.login-btn{
+  width:100%; padding: 16px; font-size: 16px; font-weight: 700; margin-top: 8px;
+}
+.login-hint{ text-align:center; color: var(--text-muted); font-size: 12px; margin-top: 18px; }
+
+@media (max-width: 560px){
+  .login-card{ padding: 40px 26px; }
+}
