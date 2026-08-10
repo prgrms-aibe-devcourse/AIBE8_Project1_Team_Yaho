@@ -24,6 +24,13 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     labelSido:     $('#mapLabelSido'),
     labelSigungu:  $('#mapLabelSigungu'),
     dropup:        $('#mapLabelDropup'),
+    sigunguDraw:         $('#sigunguDraw'),
+    sigunguDrawEyebrow:  $('#sigunguDrawEyebrow'),
+    sigunguDrawQuestion: $('#sigunguDrawQuestion'),
+    sigunguDrawText:     $('#sigunguDrawText'),
+    sigunguDrawStart:    $('#sigunguDrawStart'),
+    sigunguDrawConfirm:  $('#sigunguDrawConfirm'),
+    sigunguDrawClose:    $('#sigunguDrawClose'),
   };
 
   const DEFAULT_LABEL_TEXT = '클릭하여 지역 선택';
@@ -159,12 +166,13 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     svgEl.setAttribute('viewBox', `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad + labelPad} ${bbox.height + pad + labelPad}`);
 
     const dest = info.destId ? byId(info.destId) : null;
-    el.markers.style.transform = '';
-    el.markers.innerHTML = `
-      <button class="marker" type="button" ${dest ? `data-dest="${dest.id}"` : ''}
-              style="left:50%; top:50%" aria-label="${info.label}">
-        ${dest && (dest.marker || dest.photo) ? `<img class="marker__img" src="${dest.marker || dest.photo}" alt="" />` : ''}
-      </button>`;
+    // 핀(마커) 표시 보류 — 랜덤 뽑기에도 미적용, 폐기 보류 상태라 전부 주석 처리
+    // el.markers.style.transform = '';
+    // el.markers.innerHTML = `
+    //   <button class="marker" type="button" ${dest ? `data-dest="${dest.id}"` : ''}
+    //           style="left:50%; top:50%" aria-label="${info.label}">
+    //     ${dest && (dest.marker || dest.photo) ? `<img class="marker__img" src="${dest.marker || dest.photo}" alt="" />` : ''}
+    //   </button>`;
 
     el.map.classList.add('is-zoomed');
     if (el.mapBack) el.mapBack.hidden = false;
@@ -178,8 +186,8 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (overviewSvgHTML) el.mapBg.innerHTML = overviewSvgHTML;
     el.mapBg.style.transform = '';
     el.mapBg.style.transformOrigin = '';
-    el.markers.style.transform = '';
-    el.markers.innerHTML = '';
+    // el.markers.style.transform = '';
+    // el.markers.innerHTML = '';
     el.map.classList.remove('is-zoomed');
     state.zoomedRegion = null;
     state.selectedId = null;
@@ -188,41 +196,135 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     closeDropup();
     mapScale = 1;
     if (el.mapBack) el.mapBack.hidden = true;
+    if (el.sigunguDraw) el.sigunguDraw.hidden = true;
   }
 
-  /* --- 랜덤 뽑기 (시/도 영역 기준) --- */
+  /* --- 시/군/구 랜덤 뽑기 모달 ---
+     zoomToRegion()이 채워둔 state.sigunguIds 중 하나를 미리 뽑아두고,
+     3초 동안 텍스트를 빠르게 랜덤 교체하는 스피너를 보여주다가 최종 시/군/구에서
+     멈추고 "여행지 확인하기" 버튼을 띄운다. 모달은 버튼을 눌러야 닫힌다.
+     ask:true면 스피너 전에 "시/군/구도 뽑아볼까요?" 질문 + "한 번 더 뽑기" 버튼을
+     먼저 보여주고, 그 버튼을 눌러야 스피너가 시작된다 (전체 지도에서 시/도를 막
+     새로 뽑은 직후에만 사용 — 이미 확대된 상태에서 다시 뽑을 땐 안 씀). */
+  async function runSigunguDraw({ ask = false } = {}) {
+    const ids = state.sigunguIds;
+    if (!ids || !ids.length || !el.sigunguDraw) return;
+
+    /* 우측 상단 x — 어느 단계에서 눌러도 그 자리에서 중단하고 모달만 닫음
+       (지도 확대 상태는 그대로 유지, 시/군/구 뽑기만 취소) */
+    let cancelled = false;
+    let resolveAsk = () => {};
+    if (el.sigunguDrawClose) {
+      el.sigunguDrawClose.onclick = () => {
+        cancelled = true;
+        el.sigunguDraw.hidden = true;
+        resolveAsk();
+      };
+    }
+
+    if (ask) {
+      const info = REGIONS.find((r) => r.id === state.zoomedRegion);
+      el.sigunguDrawEyebrow.textContent = `✦ ${info ? info.label : '지역'} 도착!`;
+      el.sigunguDrawQuestion.hidden = false;
+      el.sigunguDrawText.hidden = true;
+      el.sigunguDrawConfirm.hidden = true;
+      el.sigunguDrawStart.hidden = false;
+      el.sigunguDraw.hidden = false;
+      await new Promise((resolve) => {
+        resolveAsk = resolve;
+        el.sigunguDrawStart.onclick = resolve;
+      });
+      if (cancelled) return;
+    }
+
+    const finalId = ids[Math.floor(Math.random() * ids.length)];
+    const nameOf = (id) => (bjdCodes && bjdCodes.sigungu[id]) || id;
+
+    el.sigunguDrawEyebrow.textContent = '✦ 시/군/구 뽑는 중';
+    el.sigunguDrawQuestion.hidden = true;
+    el.sigunguDrawText.hidden = false;
+    el.sigunguDrawStart.hidden = true;
+    el.sigunguDrawConfirm.hidden = true;
+    el.sigunguDrawConfirm.onclick = null;
+    el.sigunguDrawText.innerHTML = `<span>${nameOf(finalId)}</span>`;
+    el.sigunguDraw.hidden = false;
+
+    if (!reduceMotion) {
+      const TICK_MS = 120;
+      const STEPS = Math.round(3000 / TICK_MS);
+      for (let step = 0; step < STEPS; step++) {
+        if (cancelled) return;
+        const id = step === STEPS - 1 ? finalId : ids[Math.floor(Math.random() * ids.length)];
+        el.sigunguDrawText.innerHTML = `<span>${nameOf(id)}</span>`;
+        await sleep(TICK_MS);
+      }
+    }
+    if (cancelled) return;
+
+    el.sigunguDrawConfirm.hidden = false;
+    el.sigunguDrawConfirm.onclick = () => {
+      el.sigunguDraw.hidden = true;
+      selectRegionInDropup(finalId);
+    };
+  }
+
+  /* --- 랜덤 뽑기 (시/도 영역 기준) ---
+     클릭 즉시 시작/최종 시/도를 미리 뽑아두고, 2초 동안 0.2초 간격으로
+     "밝아짐 + 외곽선 발광" 강조를 완전 랜덤한 시/도에 옮겨가며 보여주다가
+     마지막에 미리 정해둔 최종 시/도에서 멈추고 그 시/군/구 영역으로 확대한다. */
   async function runDraw() {
     if (state.rolling) return;
+
+    /* 이미 시/군/구까지 확대된 상태면 시/도를 새로 뽑지 않고
+       지금 지역의 시/군/구 뽑기 모달을 바로 스피너부터 진행한다 */
+    if (state.zoomedRegion) {
+      state.rolling = true;
+      drawBtnEl.disabled = true;
+      await runSigunguDraw();
+      drawBtnEl.disabled = false;
+      state.rolling = false;
+      return;
+    }
+
+    /* regionEls는 반드시 resetMapView() 이후에 조회해야 함 —
+       resetMapView()가 mapBg.innerHTML을 통째로 교체해서 그 전에 잡아둔
+       엘리먼트 참조는 DOM에서 떨어져 나가 강조 클래스를 줘도 화면에 안 보임 */
+    resetMapView();
     const regionEls = $$('.sido', el.mapBg);
     if (!regionEls.length) return;
 
     state.rolling = true;
     drawEl.classList.add('is-rolling');
     drawBtnEl.disabled = true;
-    resetMapView();
 
-    let index = Math.floor(Math.random() * regionEls.length);
+    const startIndex = Math.floor(Math.random() * regionEls.length);
+    const finalIndex = Math.floor(Math.random() * regionEls.length);
 
     if (!reduceMotion) {
-      let delay = 70;
-      while (delay < 250) {
-        regionEls.forEach((r) => r.classList.remove('is-rolling'));
-        index = (index + 1 + Math.floor(Math.random() * 2)) % regionEls.length;
-        regionEls[index].classList.add('is-rolling');
-        await sleep(delay);
-        delay *= 1.17;
+      const TICK_MS = 300;
+      const STEPS = 3000 / TICK_MS;
+      let current = null;
+      for (let step = 0; step < STEPS; step++) {
+        if (current) current.classList.remove('is-rolling');
+        const idx = step === 0 ? startIndex
+          : step === STEPS - 1 ? finalIndex
+          : Math.floor(Math.random() * regionEls.length);
+        current = regionEls[idx];
+        current.classList.add('is-rolling');
+        await sleep(TICK_MS);
       }
-      regionEls.forEach((r) => r.classList.remove('is-rolling'));
-      regionEls[index].classList.add('is-won');
-      setTimeout(() => regionEls[index].classList.remove('is-won'), 750);
+      current.classList.remove('is-rolling');
+      regionEls[finalIndex].classList.add('is-won');
+      setTimeout(() => regionEls[finalIndex].classList.remove('is-won'), 750);
     }
 
-    const landedId = regionEls[index].id;
+    const landedId = regionEls[finalIndex].id;
     const info = REGIONS.find((r) => r.id === landedId);
     const dest = info && info.destId ? byId(info.destId) : null;
 
     await zoomToRegion(landedId);
     showToast(`🎉 오늘의 여행지는 「${dest ? dest.name : info.label}」!`);
+    await runSigunguDraw({ ask: true });
 
     drawEl.classList.remove('is-rolling');
     drawBtnEl.disabled = false;

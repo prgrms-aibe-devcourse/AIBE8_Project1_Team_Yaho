@@ -251,8 +251,9 @@ import { initMap } from './map.js';
 
   /* --- 활성 표시 동기화 --- */
   function syncActive() {
-    $$('.marker', el.markers).forEach((m) =>
-      m.classList.toggle('is-active', m.dataset.dest === state.destId));
+    // 핀(마커) 기능 보류 — 주석 처리
+    // $$('.marker', el.markers).forEach((m) =>
+    //   m.classList.toggle('is-active', m.dataset.dest === state.destId));
     $$('.popular__btn', el.popularList).forEach((b) =>
       b.classList.toggle('is-active', b.dataset.dest === state.destId));
   }
@@ -324,7 +325,7 @@ import { initMap } from './map.js';
     el.themeNext.disabled = state.themeIndex >= max;
   }
 
-  /* 마커 툴팁 */
+  /* 마커 툴팁 — 핀(마커) 기능 보류로 주석 처리
   function showTip(marker) {
     const dest = byId(marker.dataset.dest);
     const info = dest.fares[state.transport];
@@ -337,6 +338,7 @@ import { initMap } from './map.js';
     el.mapTip.style.top  = `${y - marker.offsetHeight / 2 - 10}px`;
     el.mapTip.hidden = false;
   }
+  */
 
   /* ============================================================
      이벤트 바인딩
@@ -381,15 +383,15 @@ import { initMap } from './map.js';
       });
     }
 
-    /* 인기 지역 · 인기 여행지 그리드 · 테마 카드 · 지도 마커 */
-    [el.popularList, el.spotGrid, el.themeTrack, el.markers].filter(Boolean).forEach((root) => {
+    /* 인기 지역 · 인기 여행지 그리드 · 테마 카드 (지도 마커는 기능 보류로 제외) */
+    [el.popularList, el.spotGrid, el.themeTrack].filter(Boolean).forEach((root) => {
       root.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-dest]');
         if (btn) selectDestination(btn.dataset.dest);
       });
     });
 
-    /* 마커 호버 툴팁 */
+    /* 마커 호버 툴팁 — 핀(마커) 기능 보류로 주석 처리
     el.markers.addEventListener('mouseover', (e) => {
       const m = e.target.closest('.marker');
       if (m) showTip(m);
@@ -402,6 +404,7 @@ import { initMap } from './map.js';
       if (m) showTip(m);
     });
     el.markers.addEventListener('focusout', () => { el.mapTip.hidden = true; });
+    */
 
     /* 찜하기 */
     el.btnLike.addEventListener('click', () => {
