@@ -409,6 +409,15 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (drawBtnEl) drawBtnEl.addEventListener('click', runDraw);
   }
 
+  /* 인기 지역 리스트 클릭 → 해당 시/군/구로 확대 + 선택 고정 (main.js에서 호출) */
+  async function selectSigunguCode(sigunguId) {
+    const sidoId = sigunguId.slice(0, 2);
+    if (state.zoomedRegion !== sidoId) await zoomToRegion(sidoId);
+    selectRegionInDropup(sigunguId);
+  }
+
   loadMapSvg();
   bindMapEvents();
+
+  return { selectSigunguCode };
 }
