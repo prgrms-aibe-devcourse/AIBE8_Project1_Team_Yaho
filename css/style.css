@@ -213,7 +213,7 @@ body {
 .chip--filter.is-active .ico { color: #fff; }
 
 /* --- 블록 헤더 --- */
-.block { padding-top: 15px; }
+.block { padding-top: 4px; }
 .block + .block { border-top: 1px solid var(--line); }
 
 .block__head {
@@ -222,7 +222,7 @@ body {
   justify-content: space-between;
   gap: 8px;
 }
-.block__head--pad { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.block__head--pad { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .block__title {
   display: flex;
@@ -873,7 +873,7 @@ body {
 
 /* 넓은 화면 — 여백만 조금 더 */
 @media (min-width: 1500px) {
-  :root { --gutter: 32px; --col-left: 236px; --col-right: 276px; --gap: 20px; }
+  :root { --gutter: 32px; --col-left: 250px; --col-right: 276px; --gap: 20px; }
 }
 
 /* 노트북 */
