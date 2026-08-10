@@ -75,20 +75,35 @@ const TourAPI = ( () => {
         throw new Error(`TourAPI 요청 파라미터 오류: ${data.resultMsg || data.resultCode}`);
         }
 
+        // data가 있으면 .response, .response도 존재하면 헤더를 확인해라
         const header = data?.response?.header;
 
+        // 헤더가 존재하지 않거나 API 서버 요청 처리 과정에서 문제가 생겼다면( '0000'은 정상 코드 ) 예외 처리
         if (!header || header.resultCode !== '0000') {
         throw new Error(`TourAPI 오류: ${header?.resultMsg || '알 수 없는 오류'}`);
         }
 
+        // data 객체 안의 response 안의 body에 실제 데이터들이 존재하지 않다면 빈 배열로 만듬 
+        // 널 병합 연산자 사용
         let items = data.response.body?.items?.item ?? [];
-        items = Array.isArray(items) ? items : [items];
+        items = Array.isArray(items) ? items : [items]; // items이 배열이 아니라면 객체를 배열에 넣어서 배열로 형태로 변환시킴
 
+        // 캐시 저장
         cacheSet(url, items);
+
+        // items( 정규화된 배열 )를 반환함
         return items;
     }
 
-    // ── 3-1. 여행지 목록 ──────────────────────────────────────────────────
+// -------------------------------------------------------------------------------------------------------------------
+//  매개변수로 API 매개변수의 값을 저장해서 callApi를 호출해서 정규화된 배열을 반환하는 함수들
+// -------------------------------------------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------------------------------------------
+//  API 파라메타 참고하고 싶으면 apiParam.md 참고
+// -------------------------------------------------------------------------------------------------------------------
+
+    // ── 여행지 목록 ──────────────────────────────────────────────────
   function getTravelList({ numOfRows = 100, pageNo = 1, arrange = 'C', lDongRegnCd } = {}) {
     return callApi('areaBasedList2', {
       numOfRows, pageNo, arrange,
@@ -97,7 +112,7 @@ const TourAPI = ( () => {
     });
   }
 
-  // ── 3-2. 축제 목록 ────────────────────────────────────────────────────
+  // ── 축제 목록 ────────────────────────────────────────────────────
   function getFestivalList({ eventStartDate, eventEndDate, numOfRows = 100, pageNo = 1, lDongRegnCd } = {}) {
     // 기본값: 오늘부터 검색 (YYYYMMDD)
     const today = eventStartDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -109,7 +124,7 @@ const TourAPI = ( () => {
     });
   }
 
-  // ── 3-2-1. 공식 지역(시도) 코드 목록 ────────────────────────────────
+  // ──  공식 지역(시도) 코드 목록 ────────────────────────────────
   // lDongRegnCd를 넘기지 않고 호출하면 전국 시도(17개) 목록을
   // { code: '11', name: '서울특별시' } 형태로 반환합니다.
   // (areaBasedList2 / searchFestival2의 lDongRegnCd 파라미터에 그대로 사용)
@@ -117,15 +132,15 @@ const TourAPI = ( () => {
     return callApi('ldongCode2', { numOfRows: 20, pageNo: 1 });
   }
 
-  // ── 3-2-2. 지역 하나에 대해서만 여행지/축제 소량 조회 ──────────────
+  // ── 지역 하나에 대해서만 여행지/축제 소량 조회 ──────────────
   function getTravelListByArea(lDongRegnCd, numOfRows = 3) {
     return getTravelList({ numOfRows, arrange: 'Q', lDongRegnCd }); // Q=대표이미지 보장 정렬
   }
   function getFestivalListByArea(lDongRegnCd, numOfRows = 3) {
     return getFestivalList({ numOfRows, lDongRegnCd });
   }
-
-  // ── 3-2-3. 전체 시도를 돌면서 지역당 소량씩 모아 합치기 ────────────
+  
+  // ── 전체 시도를 돌면서 지역당 소량씩 모아 합치기 ────────────
   // "지역당 최소 N개씩은 보장" 하기 위한 함수.
   // 시도 하나가 실패해도(예: 해당 지역에 데이터가 아예 없음) 전체가 죽지 않게
   // 개별적으로 catch 처리 후 빈 배열로 대체합니다.
@@ -144,14 +159,14 @@ const TourAPI = ( () => {
     return lists.flat();
   }
 
-  // ── 3-3. 이름으로 검색 ────────────────────────────────────────────────
+  // ── 이름으로 검색 ────────────────────────────────────────────────
   function searchKeyword(keyword, { contentTypeId, numOfRows = 20, pageNo = 1 } = {}) {
     return callApi('searchKeyword2', {
       numOfRows, pageNo, contentTypeId, keyword,
     });
   }
 
-  // ── 3-4. 상세 소개글 ──────────────────────────────────────────────────
+  // ──  상세 소개글 ──────────────────────────────────────────────────
   // ⚠️ defaultYN / contentTypeId / overviewYN 전부 이 배포 버전에서는
   //    INVALID_REQUEST_PARAMETER_ERROR로 거부됨 (실측 확인).
   //    contentId 단독으로만 요청 (overview가 기본 포함되는지 확인 중).
@@ -160,7 +175,7 @@ const TourAPI = ( () => {
     return items[0] ?? null;
   }
 
-  // ── 3-5. 상세 부가정보 ────────────────────────────────────────────────
+  // ──  상세 부가정보 ────────────────────────────────────────────────
   async function getDetailIntro(contentId, contentTypeId) {
     const items = await callApi('detailIntro2', {
       contentId, contentTypeId,
@@ -168,14 +183,14 @@ const TourAPI = ( () => {
     return items[0] ?? null;
   }
 
-  // ── 3-6. 상세 갤러리 사진 ─────────────────────────────────────────────
+  // ── 상세 갤러리 사진 ─────────────────────────────────────────────
   function getDetailImages(contentId) {
     return callApi('detailImage2', {
       contentId, imageYN: 'Y',
     }).catch(() => []); // 사진이 없는 콘텐츠도 많으므로 실패해도 빈 배열 처리
   }
 
-  // ── 3-7. 상세 반복정보 (입장료, 이용안내 등 이름-값 쌍이 여러 개) ────
+  // ── 상세 반복정보 (입장료, 이용안내 등 이름-값 쌍이 여러 개) ────
   function getDetailInfo(contentId, contentTypeId) {
     return callApi('detailInfo2', { contentId, contentTypeId }).catch(() => []);
     // 반복정보가 없는 콘텐츠도 많으므로 실패해도 빈 배열 처리
