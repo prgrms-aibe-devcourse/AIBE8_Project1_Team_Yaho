@@ -99,9 +99,6 @@
           '<button type="button" class="share-sns-btn" data-sns="x">' +
             '<span class="share-sns-icon share-sns-x">✕</span><span>엑스</span>' +
           '</button>' +
-          '<button type="button" class="share-sns-btn" data-sns="kakao">' +
-            '<span class="share-sns-icon share-sns-kakao">talk</span><span>카카오톡</span>' +
-          '</button>' +
           '<button type="button" class="share-sns-btn" data-sns="band">' +
             '<span class="share-sns-icon share-sns-band">b</span><span>밴드</span>' +
           '</button>' +
@@ -118,19 +115,85 @@
     });
     overlay.querySelector('.share-modal-close').addEventListener('click', closeShareModal);
 
+    overlay.querySelector('.share-modal-sns').addEventListener('click', function (e) {
+      var btn = e.target.closest('.share-sns-btn');
+      if (!btn) return;
+      shareVia(btn.dataset.sns, overlay.dataset.shareUrl || '', overlay.dataset.shareTitle || '');
+    });
+
+    overlay.querySelector('#share-modal-copy').addEventListener('click', function () {
+      var input = document.getElementById('share-modal-url');
+      copyToClipboard(input.value).then(function () {
+        showToast('링크를 복사했습니다');
+      }, function () {
+        showToast('복사에 실패했습니다');
+      });
+    });
+
     return overlay;
   }
 
-  function openShareModal(url) {
-    var overlay = ensureShareModal();
+  function openShareModal(url, title) {
+    var overlay = ensureShareModal(); // 모달이 없으면 만들고 있으면 기존 것 재사용
     var input = document.getElementById('share-modal-url');
-    if (input) input.value = url;
-    overlay.classList.add('open');
+    if (input) input.value = url; // URL 입력창에 현재 페이지 주소 넣어주기
+    overlay.dataset.shareUrl = url;
+    overlay.dataset.shareTitle = title || document.title;
+    overlay.classList.add('open'); // open 클래스를 붙여서 CSS로 화면을 보이게함
   }
 
   function closeShareModal() {
     var overlay = document.getElementById('share-modal-overlay');
     if (overlay) overlay.classList.remove('open');
+  }
+
+  // 클립보드 API가 막혀있는 환경(비보안 컨텍스트 등)을 위한 execCommand 폴백
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy') ? resolve() : reject();
+      } catch (e) {
+        reject(e);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    });
+  }
+
+  // 가운데 정렬된 작은 팝업 창으로 SNS 공유 다이얼로그를 띄움
+  function openSharePopup(url) {
+    var w = 560, h = 480;
+    var left = (window.screen.width - w) / 2;
+    var top = (window.screen.height - h) / 2;
+    window.open(url, 'share-popup', 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top);
+  }
+
+  // sns별 공유 다이얼로그 URL. 로그인/API 키 없이 여는 방식
+  var SNS_SHARE_URL = {
+    facebook: function (url) {
+      return 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+    },
+    x: function (url, title) {
+      return 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title);
+    },
+    band: function (url, title) {
+      return 'https://band.us/plugin/share?body=' + encodeURIComponent(title + ' ' + url) + '&route=' + encodeURIComponent(url);
+    }
+  };
+
+  function shareVia(sns, url, title) {
+    var buildUrl = SNS_SHARE_URL[sns];
+    if (buildUrl) openSharePopup(buildUrl(url, title));
   }
 
   // 지금 보고 있는 상세 페이지로 돌아올 수 있는 링크 (postList.js의 detailLink()와 동일한 형태)
@@ -366,7 +429,7 @@
     var shareBtn = document.getElementById('share-btn');
     if (shareBtn) {
       shareBtn.addEventListener('click', function () {
-        openShareModal(new URL(buildSelfLink(), window.location.href).href);
+        openShareModal(new URL(buildSelfLink(), window.location.href).href, common.title);
       });
     }
   }
