@@ -34,16 +34,10 @@ import { getPopularRegions } from './popArea.js';
     transport: 'car',
     origin: null,
     originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
-    /* "찜한 여행지" 카운트 — 오늘의 여행지(todaySpot.js)도 같은 키를 공유해서 찜한다 */
-    liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '[]')),
     themeIndex: 0,
     spotCategory: '전체',
     spotPage: 1,
     popularRegions: null, /* getPopularRegions() 로딩 전까지는 null → 샘플 데이터로 자리 표시 */
-    /* 로그인 연동 전 데모용 — 실제로는 서버에서 받아와야 함 */
-    loggedIn: JSON.parse(localStorage.getItem('wtg:loggedIn') || 'false'),
-    recordStamps: 4,
-    recordJournals: 2,
   };
 
   /* ---------- 출발지 드롭업 (시/도 → 시/군/구) ---------- */
@@ -102,8 +96,6 @@ import { getPopularRegions } from './popArea.js';
     myRecord:  $('#myRecord'),
     btnGeo:    $('#btnGeo'),
     geoLabel:  $('#geoLabel'),
-    btnSaved:  $('#btnSaved'),
-    savedCount:$('#savedCount'),
 
     originSelect: $('#originSelect'),
     originLabel:  $('#originLabel'),
@@ -347,36 +339,46 @@ import { getPopularRegions } from './popArea.js';
     }).join('');
   }
 
-  /* --- 찜 카운트 --- */
-  function renderSavedCount() {
-    const n = state.liked.size;
-    el.savedCount.textContent = n;
-    el.savedCount.hidden = n === 0;
-    el.btnSaved.classList.toggle('is-on', n > 0);
+  /* --- 내 여행 기록 --- */
+  function isLoggedIn() {
+    try { return localStorage.getItem('isLoggedIn') === 'true'; }
+    catch (e) { return false; }
   }
 
-  /* --- 내 여행 기록 --- */
+  function getBookmarkCount() {
+    try {
+      const list = JSON.parse(localStorage.getItem('travelBookmarks_v1') || '[]');
+      return Array.isArray(list) ? list.length : 0;
+    } catch (e) { return 0; }
+  }
+
+  function getJournalCount() {
+    try {
+      const s = JSON.parse(localStorage.getItem('travelDiaryState_v1') || 'null');
+      if (!s || !Array.isArray(s.albums)) return 0;
+      return s.albums.reduce((sum, a) => sum + (a.entries ? a.entries.length : 0), 0);
+    } catch (e) { return 0; }
+  }
+
   function renderMyRecord() {
     if (!el.myRecord) return;
-    if (state.loggedIn) {
+    if (isLoggedIn()) {
       el.myRecord.innerHTML = `
         <ul>
-          <li>
-            <span>
-            <span class="emoji">🏷️ </span>
-            <span class>여행 스탬프 </span>
-            <strong class="stat__value">${state.recordStamps}개</strong>
-            </span>
+          <li class="my-record__row">
+            <svg class="ico"><use href="#i-bookmark"/></svg>
+            <span>북마크 </span>
+            <strong class="stat__value">${getBookmarkCount()}개</strong>
           </li>
-          <li class>
-            <span class="emoji">📖 </span>
-            <span>여행일지 </span><strong class="stat__value">${state.recordJournals}개</strong>
+          <li class="my-record__row">
+            <svg class="ico"><use href="#i-notebook"/></svg>
+            <span>여행 수첩 </span><strong class="stat__value">${getJournalCount()}개</strong>
           </li>
         </ul>
         <button class="my-record__btn" type="button" id="btnRecordView">기록 보러가기</button>`;
     } else {
       el.myRecord.innerHTML = `
-        <p class="my-record__msg">여행 스탬프와 여행일지를 남겨보세요</p>
+        <p class="my-record__msg">북마크와 여행 수첩을 남겨보세요</p>
         <button class="my-record__btn" type="button" id="btnRecordLogin">로그인하고 시작하기</button>`;
     }
   }
@@ -538,31 +540,21 @@ import { getPopularRegions } from './popArea.js';
     el.markers.addEventListener('focusout', () => { el.mapTip.hidden = true; });
     */
 
-    /* 오늘의 여행지(todaySpot.js)에서 찜 상태가 바뀌면 헤더 찜 카운트 갱신 */
-    window.addEventListener('wtg:liked-changed', () => {
-      state.liked = new Set(JSON.parse(localStorage.getItem('wtg:liked') || '[]'));
-      renderSavedCount();
-    });
+    /* 헤더 로그인/로그아웃 시 내 여행 기록 갱신 */
+    window.addEventListener('wtg:login-changed', renderMyRecord);
 
     /* 내 여행 기록 */
     if (el.myRecord) {
       el.myRecord.addEventListener('click', (e) => {
         if (e.target.closest('#btnRecordLogin')) {
-          state.loggedIn = true;
-          localStorage.setItem('wtg:loggedIn', 'true');
-          renderMyRecord();
-          showToast('로그인했어요');
+          try { sessionStorage.setItem('postLoginRedirect', location.href); }
+          catch (err) { /* 저장 실패해도 로그인 자체는 진행 */ }
+          location.href = 'login.html';
         } else if (e.target.closest('#btnRecordView')) {
-          showToast('기록 페이지는 준비 중이에요');
+          location.href = 'album.html';
         }
       });
     }
-
-    /* 찜 목록 버튼 */
-    el.btnSaved.addEventListener('click', () => {
-      const n = state.liked.size;
-      showToast(n ? `🔖 찜한 여행지 ${n}곳` : '아직 찜한 여행지가 없어요');
-    });
 
     /* 출발지 드롭업 (시/도 → 시/군/구) */
     el.originSelect.addEventListener('click', () => {
@@ -663,7 +655,6 @@ import { getPopularRegions } from './popArea.js';
     renderThemes();
 
     selectDestination(state.destId, { toast: false });
-    renderSavedCount();
     renderMyRecord();
     moveThemes(0);
     mapApi = initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });

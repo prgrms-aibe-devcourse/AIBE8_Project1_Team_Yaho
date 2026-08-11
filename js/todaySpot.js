@@ -16,7 +16,8 @@
   'use strict';
 
   const CACHE_KEY = 'wtg:todaySpot:v1';
-  const LIKED_KEY = 'wtg:liked'; // 헤더 찜 카운트(main.js)와 동일한 키 공유
+  const LIKED_KEY = 'wtg:liked'; // 이 위젯 안에서 하트 아이콘 on/off 표시용
+  const BOOKMARK_KEY = 'travelBookmarks_v1'; // detail.js/bookmark.js와 공유하는 북마크 목록
   const FALLBACK_IMG = 'images/th-hallasan.png';
   const POOL_PAGES = 30; // 여행지 목록 중 임의의 페이지를 뽑아 그 날의 5개를 정함
   const SPOT_COUNT = 5;
@@ -115,13 +116,24 @@
     renderSpot();
   }
 
+  function toggleBookmark(id, image, link) {
+    const list = readJSON(BOOKMARK_KEY, []);
+    const idx = list.findIndex((b) => String(b.id) === String(id));
+    if (idx > -1) list.splice(idx, 1);
+    else list.unshift({ id, image, link });
+    writeJSON(BOOKMARK_KEY, list);
+  }
+
   function toggleLike() {
     const item = state.items[state.index];
     if (!item) return;
     const nowLiked = !state.liked.has(item.contentid);
     nowLiked ? state.liked.add(item.contentid) : state.liked.delete(item.contentid);
     writeJSON(LIKED_KEY, [...state.liked]);
-    window.dispatchEvent(new CustomEvent('wtg:liked-changed')); // 헤더 찜 카운트(main.js) 갱신용
+
+    const image = item.firstimage || item.firstimage2 || FALLBACK_IMG;
+    const link = `detail.html?id=${item.contentid}&type=${item.contenttypeid}`;
+    toggleBookmark(item.contentid, image, link);
 
     el.like.classList.remove('is-beat');
     void el.like.offsetWidth; // 애니메이션 리셋

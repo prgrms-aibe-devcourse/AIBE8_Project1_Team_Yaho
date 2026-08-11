@@ -137,7 +137,6 @@ const Topnav = {
           <div class="header__actions">
             <button class="icon-btn" type="button" id="btnSaved" aria-label="찜한 여행지">
               <svg class="ico"><use href="#i-bookmark"/></svg>
-              <span class="icon-btn__badge" id="savedCount" hidden>0</span>
             </button>
             <button class="btn btn--primary btn--login" type="button" id="btnLogin"></button>
           </div>
@@ -157,6 +156,7 @@ const Topnav = {
   setLoggedIn(value) {
     try { localStorage.setItem('isLoggedIn', value ? 'true' : 'false'); }
     catch (e) { /* 저장 실패는 무시 */ }
+    window.dispatchEvent(new CustomEvent('wtg:login-changed'));
   },
 
   updateLoginButtonLabel() {

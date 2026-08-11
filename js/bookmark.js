@@ -9,7 +9,48 @@
    카드를 클릭하면 저장된 link(=detail.html?id=...&type=...)로 이동하고,
    카드 우상단 ✕ 버튼으로 개별 삭제도 가능하다.
    ============================================================ */
-if(page === 'bookmark'){
+/* ============================================================
+   헤더 찜(북마크) 버튼 (#btnSaved, topnav.js가 그려줌)
+   --------------------------------------------------------------
+   모든 페이지에 이 스크립트가 포함되어 있어야 동작한다.
+   더 이상 찜한 개수를 세지 않는다 — 그냥 "로그인 상태면
+   마이페이지의 북마크 탭(bookmark.html)으로 이동"하는 바로가기 버튼.
+   비로그인 상태면 토스트로 로그인 안내만 띄운다.
+   ============================================================ */
+(function(){
+  const btn = document.getElementById('btnSaved');
+  if(!btn) return; // 헤더가 없는 페이지에서는 조용히 무시
+
+  // 외곽선 색으로 아이콘을 채워서 보여준다 (icon-btn.is-on .ico { fill: currentColor })
+  btn.classList.add('is-on');
+
+  function isLoggedIn(){
+    try{ return localStorage.getItem('isLoggedIn') === 'true'; }
+    catch(e){ return false; }
+  }
+
+  // app.js의 전역 toast()가 없는 페이지(index.html)에서도 동작하도록 자체 구현
+  function headerToast(msg){
+    let el = document.getElementById('toast');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'toast';
+      el.className = 'toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('show', 'is-on');
+    clearTimeout(headerToast._t);
+    headerToast._t = setTimeout(()=> el.classList.remove('show', 'is-on'), 2200);
+  }
+
+  btn.addEventListener('click', () => {
+    if(isLoggedIn()) location.href = 'bookmark.html';
+    else headerToast('로그인이 필요합니다');
+  });
+})();
+
+if(typeof page !== 'undefined' && page === 'bookmark'){
 
   const BOOKMARK_KEY = 'travelBookmarks_v1';
 
