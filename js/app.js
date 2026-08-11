@@ -3,9 +3,11 @@
 
    ⚠️ 이 파일(app.js)은 모든 페이지가 공통으로 불러 씁니다.
       상태 관리(localStorage), toast, escapeHtml 같은 공통 함수와
-      "login"/"mypage" 페이지 로직만 여기 있습니다.
+      "mypage" 페이지 로직만 여기 있습니다.
 
       아래 페이지들의 로직은 각자 자기 파일로 분리되어 있습니다:
+      - login.html                                        -> js/login.js
+      - register.html                                     -> js/register.js
       - album.html / album-detail.html / album-edit.html -> js/album.js
       - bookmark.html                                     -> js/bookmark.js
 
@@ -14,9 +16,13 @@
        지금은 app.js에는 공통 코드만, 나머지는 각 페이지 전용 js에만 있습니다)
 
       스크립트 로딩 순서: app.js -> topnav.js -> sidebar.js -> (album.js | bookmark.js)
-      album.js/bookmark.js는 app.js가 정의하는 state, saveState, toast,
-      escapeHtml, fmtDate, dayCount, getQueryParam, on, swatchButtonsHtml,
-      fileToDataUrl, page 를 그대로 사용하므로 반드시 app.js보다 나중에 로드됩니다.
+      login.js/register.js는 topnav.js/sidebar.js가 필요 없는 단독 페이지라서
+      app.js 바로 다음에 로드됩니다 (login.html/register.html 참고).
+
+      album.js/bookmark.js/login.js/register.js는 app.js가 정의하는 state,
+      saveState, toast, escapeHtml, fmtDate, dayCount, getQueryParam, on,
+      swatchButtonsHtml, fileToDataUrl, page, getAccounts, saveAccounts,
+      findAccountByEmail 을 그대로 사용하므로 반드시 app.js보다 나중에 로드됩니다.
 
       각 페이지는 <body data-page="..."> 로 자기 자신을 표시하고,
       모든 js 파일은 이 값을 읽어서 "지금 이 페이지에 필요한 코드만" 실행합니다.
@@ -26,6 +32,37 @@
 
 const STORAGE_KEY = 'travelDiaryState_v1';
 
+/* ---------------- 회원 계정 저장소 ---------------- */
+// state(STORAGE_KEY)는 "지금 로그인한 사람의 프로필/앨범"이고,
+// 여기 ACCOUNTS_KEY는 "회원가입한 계정 목록"이라 서로 다른 저장소다.
+// (실제 서비스라면 서버 DB에 있어야 할 부분을 localStorage로 흉내낸 것)
+// ⚠️ 데모/학습용 구조라 비밀번호를 평문으로 저장한다. 실제 서비스라면
+//    서버에서 해시로 저장해야 한다.
+const ACCOUNTS_KEY = 'travelAccounts_v1';
+
+function getAccounts(){
+  try{
+    const raw = localStorage.getItem(ACCOUNTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveAccounts(accounts){
+  try{ localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts)); }
+  catch(e){ /* 저장 실패(용량 초과 등)는 무시 */ }
+}
+function findAccountByEmail(email){
+  return getAccounts().find(a => a.email.toLowerCase() === String(email).toLowerCase()) || null;
+}
+// 처음 방문한 사람도 바로 로그인해볼 수 있도록 데모 계정 하나를 미리 심어둔다.
+// (login.html 힌트 문구의 traveler@gmail.com / demo1234 와 짝이 맞아야 함)
+function ensureDemoAccount(){
+  if(getAccounts().length > 0) return;
+  saveAccounts([
+    { id: 'u_demo', name: '여행자', email: 'traveler@gmail.com', password: 'demo1234' }
+  ]);
+}
+ensureDemoAccount();
+
 // 앨범 카드 / 수정 페이지에서 고를 수 있는 색상 팔레트 (10가지)
 const SWATCHES = [
   '#2f92d6', '#e14b46', '#1fc2b0', '#8dc93a', '#eab13a',
@@ -33,6 +70,28 @@ const SWATCHES = [
 ];
 
 const page = document.body.dataset.page; // 현재 페이지 이름
+
+/* ---------------- 로그인 필요 페이지 가드 ---------------- */
+// mypage / album 계열은 로그인 없이 못 들어오게 막는다.
+// (topnav.js가 로그인 성공 시 켜두는 localStorage('isLoggedIn') 값을 그대로 사용)
+// bookmark는 이번 요청 범위에 없어서 그대로 둔다 — 막고 싶으면 아래 배열에 'bookmark' 추가.
+const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edit'];
+
+(function guardLoginRequiredPages(){
+  if (LOGIN_REQUIRED_PAGES.indexOf(page) === -1) return;
+
+  let loggedIn = false;
+  try { loggedIn = localStorage.getItem('isLoggedIn') === 'true'; }
+  catch (e) { /* localStorage 접근 실패 시 안전하게 "비로그인"으로 취급 */ }
+
+  if (loggedIn) return;
+
+  // 로그인 후 원래 보려던 페이지로 돌아올 수 있도록 주소를 남겨둔다.
+  try { sessionStorage.setItem('postLoginRedirect', location.href); }
+  catch (e) { /* 저장 실패해도 이동 자체는 진행 */ }
+
+  location.href = 'login.html';
+})();
 
 /* ---------------- 초기 시드 데이터 ---------------- */
 function seedState(){
@@ -157,33 +216,6 @@ on('back-to-list-btn', 'click', ()=>{
   if(history.length > 1) history.back();
   else location.href = 'album.html';
 });
-
-
-/* ============================================================
-   1) login.html
-   ============================================================ */
-if(page === 'login'){
-  on('login-form', 'submit', (e)=>{
-    e.preventDefault();
-
-    // index.html의 헤더(js/indexTopnav.js)가 "로그인/로그아웃" 버튼 라벨을
-    // 판단하는 데 쓰는 공통 플래그. 여기서 로그인 성공 시 켜준다.
-    try{ localStorage.setItem('isLoggedIn', 'true'); }catch(err){ /* 무시 */ }
-
-    toast('로그인 되었습니다');
-
-    // index.html에서 "로그인" 버튼을 눌러 넘어온 경우, 로그인 후 원래
-    // 있던 페이지로 되돌아간다. 그 값이 없으면(=마이페이지 쪽 흐름) 기존처럼
-    // mypage.html로 이동한다.
-    var redirectTo = null;
-    try{
-      redirectTo = sessionStorage.getItem('postLoginRedirect');
-      if(redirectTo) sessionStorage.removeItem('postLoginRedirect');
-    }catch(err){ /* 무시 */ }
-
-    setTimeout(()=>{ window.location.href = redirectTo || 'mypage.html'; }, 300);
-  });
-}
 
 
 /* ============================================================
