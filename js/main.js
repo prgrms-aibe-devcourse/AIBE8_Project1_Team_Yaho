@@ -516,19 +516,6 @@ import { getPopularRegions } from './popArea.js';
      이벤트 바인딩
      ============================================================ */
   function bindEvents() {
-    /* GNB */
-    $$('.gnb__item').forEach((item) => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        $$('.gnb__item').forEach((i) => {
-          i.classList.remove('is-active');
-          i.removeAttribute('aria-current');
-        });
-        item.classList.add('is-active');
-        item.setAttribute('aria-current', 'page');
-      });
-    });
-
     /* 교통수단 */
     if (el.transportList) {
       el.transportList.addEventListener('click', (e) => {
