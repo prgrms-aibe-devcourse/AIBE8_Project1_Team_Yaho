@@ -34,6 +34,28 @@ const SWATCHES = [
 
 const page = document.body.dataset.page; // 현재 페이지 이름
 
+/* ---------------- 로그인 필요 페이지 가드 ---------------- */
+// mypage / album 계열은 로그인 없이 못 들어오게 막는다.
+// (topnav.js가 로그인 성공 시 켜두는 localStorage('isLoggedIn') 값을 그대로 사용)
+// bookmark는 이번 요청 범위에 없어서 그대로 둔다 — 막고 싶으면 아래 배열에 'bookmark' 추가.
+const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edit'];
+
+(function guardLoginRequiredPages(){
+  if (LOGIN_REQUIRED_PAGES.indexOf(page) === -1) return;
+
+  let loggedIn = false;
+  try { loggedIn = localStorage.getItem('isLoggedIn') === 'true'; }
+  catch (e) { /* localStorage 접근 실패 시 안전하게 "비로그인"으로 취급 */ }
+
+  if (loggedIn) return;
+
+  // 로그인 후 원래 보려던 페이지로 돌아올 수 있도록 주소를 남겨둔다.
+  try { sessionStorage.setItem('postLoginRedirect', location.href); }
+  catch (e) { /* 저장 실패해도 이동 자체는 진행 */ }
+
+  location.href = 'login.html';
+})();
+
 /* ---------------- 초기 시드 데이터 ---------------- */
 function seedState(){
   return {
