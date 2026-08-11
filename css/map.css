@@ -265,6 +265,88 @@
 
 .sigungu-draw__dialog .btn--cta { width: 100%; margin-top: 0; }
 
+/* 지역 미리보기 패널 — 드롭다운/랜덤뽑기/지도 클릭으로 시/군/구가 확정되면
+   지도 컨테이너(overflow:hidden) 안쪽 오른편에 절반 조금 안 되는 너비로 떠서
+   그 지역 여행지 4개(2x2)를 보여줌. .map이 기준이라 밖으로 안 넘침 */
+.region-preview {
+  position: absolute;
+  z-index: 24;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: min(44%, 340px);
+  height: min(80%, 500px);
+  padding: 18px 16px;
+  overflow-y: auto;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  box-shadow: var(--sh-3);
+}
+.region-preview[hidden] { display: none; }
+
+.region-preview__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--ink-500);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .14s var(--ease), color .14s var(--ease);
+}
+.region-preview__close:hover { background: var(--tint); color: var(--ink-800); }
+
+.region-preview__title {
+  margin: 0 0 14px;
+  padding-right: 24px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.region-preview__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.region-preview__card {
+  cursor: pointer;
+  text-align: left;
+}
+.region-preview__card-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--r-md);
+  display: block;
+  background: var(--tint);
+}
+.region-preview__card-name {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-800);
+  line-height: 1.3;
+}
+.region-preview__empty {
+  grid-column: 1 / -1;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+.region-preview__more { width: 100%; margin-top: 0; }
+
 .map__markers { position: absolute; inset: 0; pointer-events: none; }
 
 /* 핀(마커) 기능 보류 — 랜덤 뽑기에 미적용, 폐기 보류 상태라 전부 주석 처리

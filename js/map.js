@@ -31,6 +31,11 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     sigunguDrawStart:    $('#sigunguDrawStart'),
     sigunguDrawConfirm:  $('#sigunguDrawConfirm'),
     sigunguDrawClose:    $('#sigunguDrawClose'),
+    preview:       $('#regionPreview'),
+    previewClose:  $('#regionPreviewClose'),
+    previewTitle:  $('#regionPreviewTitle'),
+    previewGrid:   $('#regionPreviewGrid'),
+    previewMore:   $('#regionPreviewMore'),
   };
 
   const DEFAULT_LABEL_TEXT = '클릭하여 지역 선택';
@@ -121,6 +126,56 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     showLabel(group.repId);
   }
 
+  const PREVIEW_FALLBACK_IMG = 'images/th-hallasan.png';
+  /* TourAPI(ldongCode2/areaBasedList2)는 광주(29)·전남(46)을 실제로는 하나의 시도코드('12')로만
+     조회 가능함 — 법정동 원래 코드로 요청하면 0건 반환 (실측 확인). 미리보기 조회 시에만 변환 */
+  const MERGED_SIDO_BASE = { 29: '12', 46: '12' };
+
+  function hideRegionPreview() {
+    if (el.preview) el.preview.hidden = true;
+  }
+
+  /* 드롭다운/랜덤뽑기/지도 클릭으로 시/군/구가 확정됐을 때 공통으로 띄우는 미리보기 —
+     지도 밖으로 이동하는 대신, 지도 컨테이너 안에서 그 지역 여행지 4개를 먼저 보여준다 */
+  async function showRegionPreview(sidoId, sigunguId) {
+    if (!el.preview) return;
+    const sidoName = (bjdCodes && bjdCodes.sido[sidoId]) || '';
+    const sigunguName = (bjdCodes && bjdCodes.sigungu[sigunguId]) || '';
+    const fullName = sigunguName ? `${sidoName} ${sigunguName}` : sidoName;
+
+    el.previewTitle.textContent = fullName;
+    el.previewMore.textContent = `${sigunguName || sidoName} 살펴보기`;
+    el.previewMore.onclick = () => {
+      location.href = `postList.html?area=${sidoId}&sigungu=${sigunguId}`;
+    };
+    el.previewGrid.innerHTML = '<li class="region-preview__empty">불러오는 중…</li>';
+    el.preview.hidden = false;
+
+    let items = [];
+    try {
+      // TourAPI 시군구 코드는 5자리 법정동코드가 아니라 시도코드를 뺀 3자리 코드로만 조회됨
+      const sigunguSuffix = sigunguId && sigunguId.length > 2 ? sigunguId.slice(2) : sigunguId;
+      items = await TourAPI.getTravelListByArea(MERGED_SIDO_BASE[sidoId] || sidoId, 4, sigunguSuffix);
+    } catch (err) {
+      console.error('지역 미리보기 여행지 조회 실패:', err);
+    }
+
+    if (!items.length) {
+      el.previewGrid.innerHTML = '<li class="region-preview__empty">등록된 여행지가 없어요</li>';
+      return;
+    }
+
+    el.previewGrid.innerHTML = items.slice(0, 4).map((it) => {
+      const img = it.firstimage || it.firstimage2 || PREVIEW_FALLBACK_IMG;
+      const name = it.title || '이름 없음';
+      return `
+        <li class="region-preview__card" data-id="${it.contentid}" data-type="${it.contenttypeid || TourAPI.CONTENT_TYPE.TRAVEL}">
+          <img class="region-preview__card-img" src="${img}" alt="" loading="lazy" onerror="this.src='${PREVIEW_FALLBACK_IMG}'" />
+          <span class="region-preview__card-name">${name}</span>
+        </li>`;
+    }).join('');
+  }
+
   /* --- 지도 SVG 인라인 로드 (지역별 id/path 접근용) --- */
   async function loadMapSvg() {
     if (!el.mapBg) return;
@@ -170,6 +225,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     state.sigunguIds = [...new Set(matched.map((g) => resolveRegionGroup(g.id).repId))];
     hideLabel(true);
     closeDropup();
+    hideRegionPreview();
 
     const svgEl = doc.documentElement.cloneNode(false);
     matched.forEach((g) => { g.classList.add('region'); svgEl.appendChild(g); });
@@ -218,6 +274,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     state.sigunguIds = null;
     hideLabel(true);
     closeDropup();
+    hideRegionPreview();
     mapScale = 1;
     if (el.mapBack) el.mapBack.hidden = true;
     if (el.sigunguDraw) el.sigunguDraw.hidden = true;
@@ -289,6 +346,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     el.sigunguDrawConfirm.onclick = () => {
       el.sigunguDraw.hidden = true;
       selectRegionInDropup(finalId);
+      showRegionPreview(state.zoomedRegion, finalId);
     };
   }
 
@@ -379,16 +437,19 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
         if (!stillInside) hideLabel();
       });
 
-      /* 시군구 클릭 — 지명 고정 + 배경 강조, 같은 시/군/구를 다시 클릭하면 해제 */
+      /* 시군구 클릭 — 지명 고정 + 배경 강조, 같은 시/군/구를 다시 클릭하면 해제.
+         새로 선택한 경우엔 강조만 하지 않고 그 지역 여행지 목록 페이지로 이동시킨다. */
       el.mapBg.addEventListener('click', (e) => {
         const region = e.target.closest('.region');
         if (!region) return;
-        if (state.selectedId === resolveRegionGroup(region.id).repId) {
+        const group = resolveRegionGroup(region.id);
+        if (state.selectedId === group.repId) {
           paintSelectedRegions([]);
           state.selectedId = null;
           showLabel(region.id);
         } else {
           selectRegionInDropup(region.id);
+          showRegionPreview(group.repId.slice(0, 2), group.repId);
         }
       });
     }
@@ -404,8 +465,13 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
       el.dropup.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-id]');
         if (!btn) return;
-        if (btn.dataset.key === 'sido') zoomToRegion(btn.dataset.id);
-        else selectRegionInDropup(btn.dataset.id);
+        if (btn.dataset.key === 'sido') {
+          zoomToRegion(btn.dataset.id);
+        } else {
+          const group = resolveRegionGroup(btn.dataset.id);
+          selectRegionInDropup(btn.dataset.id);
+          showRegionPreview(group.repId.slice(0, 2), group.repId);
+        }
         closeDropup();
       });
     }
@@ -431,6 +497,16 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     }
 
     if (drawBtnEl) drawBtnEl.addEventListener('click', runDraw);
+
+    /* 지역 미리보기 패널 — 닫기 버튼 / 카드 클릭 시 해당 여행지 상세로 이동 */
+    if (el.previewClose) el.previewClose.addEventListener('click', hideRegionPreview);
+    if (el.previewGrid) {
+      el.previewGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.region-preview__card');
+        if (!card) return;
+        location.href = `detail.html?id=${card.dataset.id}&type=${card.dataset.type}`;
+      });
+    }
   }
 
   /* 인기 지역 리스트 클릭 → 해당 시/군/구로 확대 + 선택 고정 (main.js에서 호출).
@@ -445,5 +521,5 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
   loadMapSvg();
   bindMapEvents();
 
-  return { selectSigunguCode };
+  return { selectSigunguCode, showRegionPreview };
 }

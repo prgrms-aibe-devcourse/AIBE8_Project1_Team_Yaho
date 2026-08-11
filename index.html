@@ -36,22 +36,22 @@
         </button>
       </section>
 
-      <!-- 출발지 설정 -->
+      <!-- 지역 선택 -->
       <section class="block">
         <div class="block__head">
-          <h2 class="block__title">출발지 설정 <svg class="ico ico--pin"><use href="#i-pin"/></svg></h2>
+          <h2 class="block__title">지역 선택 <svg class="ico ico--pin"><use href="#i-pin"/></svg></h2>
         </div>
 
         <div class="origin">
           <button class="origin__select" type="button" id="originSelect" aria-haspopup="listbox" aria-expanded="false">
-            <span id="originLabel">서울특별시 강남구</span>
+            <span id="originLabel">지역을 선택하세요</span>
             <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
           </button>
           <ul class="origin__list" id="originList" role="listbox" hidden></ul>
         </div>
 
-        <button class="chip chip--geo is-off" type="button" id="btnGeo">
-          <svg class="ico"><use href="#i-target"/></svg><span id="geoLabel">내 위치 사용 안 함</span>
+        <button class="chip chip--geo" type="button" id="btnGeo">
+          <svg class="ico"><use href="#i-target"/></svg><span id="geoLabel">내 위치로 이동</span>
         </button>
       </section>
 
@@ -114,6 +114,12 @@
           <button class="btn btn--primary btn--cta" type="button" id="sigunguDrawStart" hidden>한 번 더 뽑기</button>
           <button class="btn btn--primary btn--cta" type="button" id="sigunguDrawConfirm" hidden>여행지 확인하기</button>
         </div>
+      </div>
+      <div class="region-preview" id="regionPreview" hidden>
+        <button class="region-preview__close" type="button" id="regionPreviewClose" aria-label="닫기">&times;</button>
+        <p class="region-preview__title" id="regionPreviewTitle"></p>
+        <ul class="region-preview__grid" id="regionPreviewGrid"></ul>
+        <button class="btn btn--primary btn--cta region-preview__more" type="button" id="regionPreviewMore"></button>
       </div>
     </section>
 
