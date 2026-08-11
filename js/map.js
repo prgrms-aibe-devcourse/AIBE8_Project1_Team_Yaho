@@ -58,6 +58,19 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     el.labelSigungu.textContent = names.sigungu || names.sido;
   }
 
+  /* 구가 여러 개인 시(수원시 장안구/권선구/…)는 지도·API 어디서 id가 들어와도
+     "시" 하나로 묶어서 다룬다 — repId: 대표 id(부모 시 코드, 없으면 자기 자신),
+     memberIds: 실제로 지도에 강조해야 하는 leaf id 목록(구가 없으면 자기 자신뿐) */
+  function resolveRegionGroup(id) {
+    if (!bjdCodes) return { repId: id, memberIds: [id] };
+    const name = bjdCodes.sigungu[id] || id;
+    const cityName = name.includes(' ') ? name.split(' ')[0] : name;
+    const memberIds = Object.keys(bjdCodes.sigungu).filter((k) => bjdCodes.sigungu[k].startsWith(`${cityName} `));
+    if (!memberIds.length) return { repId: id, memberIds: [id] };
+    const repEntry = Object.entries(bjdCodes.sigungu).find(([, n]) => n === cityName);
+    return { repId: repEntry ? repEntry[0] : id, memberIds };
+  }
+
   /* 호버가 끝나면 지명 대신 기본 안내 텍스트로 복귀 (선택 고정 중엔 유지) */
   function hideLabel(force) {
     if (!el.label || (state.selectedId && !force)) return;
@@ -90,13 +103,22 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (el.labelBtn) el.labelBtn.setAttribute('aria-expanded', 'true');
   }
 
-  /* 드롭업에서 시/군/구를 고르면 svg 클릭과 동일하게 선택 고정 처리 */
-  function selectRegionInDropup(id) {
-    const region = el.mapBg.querySelector(`[id="${id}"]`);
+  /* 선택 상태를 지도 위에 그리기 — ids 여러 개면 한꺼번에 하이라이트(구가 여러 개인 시 전체 선택용) */
+  function paintSelectedRegions(ids) {
     $$('.region.is-selected', el.mapBg).forEach((r) => r.classList.remove('is-selected'));
-    if (region) region.classList.add('is-selected');
-    state.selectedId = id;
-    showLabel(id);
+    ids.forEach((id) => {
+      const region = el.mapBg.querySelector(`[id="${id}"]`);
+      if (region) region.classList.add('is-selected');
+    });
+  }
+
+  /* 드롭업/지도 클릭/랜덤뽑기에서 공통으로 쓰는 선택 고정 처리 —
+     구가 여러 개인 시는 resolveRegionGroup이 그 구들을 한꺼번에 묶어 하이라이트한다 */
+  function selectRegionInDropup(id) {
+    const group = resolveRegionGroup(id);
+    paintSelectedRegions(group.memberIds);
+    state.selectedId = group.repId;
+    showLabel(group.repId);
   }
 
   /* --- 지도 SVG 인라인 로드 (지역별 id/path 접근용) --- */
@@ -143,7 +165,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     el.mapBg.style.transformOrigin = '';
     mapScale = 1;
     state.selectedId = null;
-    state.sigunguIds = matched.map((g) => g.id);
+    /* 구가 여러 개인 시는 그 구들을 하나로 묶어 대표 id 하나만 남김
+       (드롭업 목록·랜덤뽑기 모두 "시" 단위로 한 번씩만 나오게) */
+    state.sigunguIds = [...new Set(matched.map((g) => resolveRegionGroup(g.id).repId))];
     hideLabel(true);
     closeDropup();
 
@@ -355,12 +379,12 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
         if (!stillInside) hideLabel();
       });
 
-      /* 시군구 클릭 — 지명 고정 + 배경 강조, 같은 곳 다시 클릭하면 해제 */
+      /* 시군구 클릭 — 지명 고정 + 배경 강조, 같은 시/군/구를 다시 클릭하면 해제 */
       el.mapBg.addEventListener('click', (e) => {
         const region = e.target.closest('.region');
         if (!region) return;
-        if (state.selectedId === region.id) {
-          region.classList.remove('is-selected');
+        if (state.selectedId === resolveRegionGroup(region.id).repId) {
+          paintSelectedRegions([]);
           state.selectedId = null;
           showLabel(region.id);
         } else {
@@ -409,7 +433,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (drawBtnEl) drawBtnEl.addEventListener('click', runDraw);
   }
 
-  /* 인기 지역 리스트 클릭 → 해당 시/군/구로 확대 + 선택 고정 (main.js에서 호출) */
+  /* 인기 지역 리스트 클릭 → 해당 시/군/구로 확대 + 선택 고정 (main.js에서 호출).
+     구가 여러 개인 시를 하나로 묶는 처리는 selectRegionInDropup 안 resolveRegionGroup이
+     공통으로 담당 — 지도 클릭이든 API에서 받은 코드든 동일하게 동작한다 */
   async function selectSigunguCode(sigunguId) {
     const sidoId = sigunguId.slice(0, 2);
     if (state.zoomedRegion !== sidoId) await zoomToRegion(sidoId);
