@@ -41,7 +41,7 @@ const Topnav = {
   //    연결해뒀습니다. 실제 파일명이 다르면 이 배열만 고치면 됩니다.
   MENU_ITEMS: [
     { icon: 'i-home',     label: '여행 지도', href: 'index.html',    match: ['index.html', ''] },
-    { icon: 'i-sparkles', label: '여행 추천', href: 'postList.html', match: ['postList.html', 'detail.html'] },
+    { icon: 'i-sparkles', label: '여행 정보', href: 'postList.html', match: ['postList.html', 'detail.html'] },
     { icon: 'i-notebook', label: '여행 수첩', href: 'album.html',    match: ['album.html', 'album-detail.html', 'album-edit.html'] },
     { icon: 'i-user',     label: '마이페이지', href: 'mypage.html',  match: ['mypage.html'] },
   ],
