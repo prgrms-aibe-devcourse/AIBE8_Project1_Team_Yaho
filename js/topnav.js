@@ -16,15 +16,19 @@
  * 사용법: index.html의 <div id="app-topnav"></div> 안에
  *        자기 자신을 채워 넣는다.
  *
- * ⚠️ 스크립트 로딩 순서 주의:
- *    main.js(type="module")는 #btnSaved / #savedCount를 그대로
- *    참조하는데, 이 요소들은 이 파일이 렌더링해야 생긴다.
- *    module 스크립트는 항상 "문서 파싱이 끝난 뒤"에 실행되고,
- *    이 파일처럼 async/defer가 없는 일반 <script>는 그 자리에서
- *    바로 실행되어 DOMContentLoaded 리스너를 먼저 등록해두므로,
- *    index.html에서 이 스크립트를 main.js보다 "먼저" 넣어두면
- *    DOMContentLoaded가 발생했을 때 이 파일의 렌더링이 항상
- *    main.js의 init()보다 먼저 끝나 있다. (순서를 바꾸지 말 것)
+ * ⚠️ 스크립트 로딩 순서 주의 + DOMContentLoaded 쓰지 말 것:
+ *    main.js(type="module")는 #btnSaved / #savedCount를 querySelector로
+ *    캐싱해서 쓰는데, 이 요소들은 이 파일이 렌더링해야 생긴다.
+ *    module 스크립트는 "문서 파싱이 끝난 직후" 실행되며, 이 시점은
+ *    DOMContentLoaded 이벤트보다 "먼저"다. 그래서 예전에 이 파일의
+ *    render()를 DOMContentLoaded 리스너 안에 넣어뒀을 때는, main.js가
+ *    #btnSaved를 미리 캐싱하는 시점에 헤더가 아직 안 그려져 있어 null이
+ *    캐싱됐고, 이후 el.btnSaved.addEventListener(...)에서 에러가 나면서
+ *    그 뒤에 있는 initMap() 호출까지 못 가서 지도가 안 그려지는 버그가
+ *    있었다. 그래서 render()는 DOMContentLoaded를 기다리지 않고 스크립트가
+ *    실행되는 즉시(파일 맨 아래 `Topnav.render();`) 호출한다 — 이 스크립트가
+ *    <div id="app-topnav">보다 뒤, main.js보다 앞에 있기만 하면 항상 안전하다.
+ *    (순서를 바꾸지 말 것)
  *
  * 로그인 상태:
  *    localStorage('isLoggedIn')로 유지되어 새로고침해도 안 풀린다.
@@ -193,4 +197,4 @@ const Topnav = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => Topnav.render());
+Topnav.render();

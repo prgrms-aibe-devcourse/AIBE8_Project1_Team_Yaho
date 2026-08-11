@@ -17,6 +17,17 @@ import { getPopularRegions } from './popArea.js';
   const icon = (name, cls = 'ico') =>
     `<svg class="${cls}" aria-hidden="true"><use href="#${name}"></use></svg>`;
 
+  /* "이런 여행지 어때요?" 카테고리 칩 → TourAPI 분류체계 대분류(lclsSystm1) 코드
+     (lclsSystmCode2 오퍼레이션으로 실측 확인: NA=자연관광, HS=역사관광, EX=체험관광,
+      LS=레저스포츠, SH=쇼핑, VE=문화관광, FD=음식). '전체'는 코드 없이 조회 */
+  const CATEGORY_LCLS = {
+    자연: 'NA', 역사: 'HS', 체험: 'EX', 레저: 'LS', 쇼핑: 'SH', 문화: 'VE', 음식: 'FD',
+  };
+  const SPOT_GRID_FALLBACK_IMG = 'images/th-hallasan.png';
+  const SPOT_PAGE_SIZE = 4;      /* 2x2 그리드 한 페이지 분량 */
+  const SPOT_TOTAL_PAGES = 5;
+  const SPOT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; /* localStorage 캐시 유효 기간(1일) */
+
   /* ---------- 상태 ---------- */
   const state = {
     destId: 'gangneung',
@@ -27,6 +38,8 @@ import { getPopularRegions } from './popArea.js';
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
     themeIndex: 0,
+    spotCategory: '전체',
+    spotPage: 1,
     popularRegions: null, /* getPopularRegions() 로딩 전까지는 null → 샘플 데이터로 자리 표시 */
     /* 로그인 연동 전 데모용 — 실제로는 서버에서 받아와야 함 */
     loggedIn: JSON.parse(localStorage.getItem('wtg:loggedIn') || 'false'),
@@ -90,6 +103,9 @@ import { getPopularRegions } from './popArea.js';
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
     categoryFilter: $('#categoryFilter'),
+    spotPagerPrev:  $('#spotPagerPrev'),
+    spotPagerNext:  $('#spotPagerNext'),
+    spotPagerLabel: $('#spotPagerLabel'),
     markers:       $('#markers'),
     mapTip:        $('#mapTip'),
     fareList:      $('#fareList'),
@@ -175,15 +191,73 @@ import { getPopularRegions } from './popArea.js';
     }
   }
 
-  /* --- 인기 여행지 그리드 (좌측) --- */
-  function renderSpotGrid() {
-    el.spotGrid.innerHTML = THEMES.map((t) => `
+  /* --- "이런 여행지 어때요?" 그리드 (좌측) — TourAPI 분류체계(lclsSystm1) 기준, 카테고리별 5페이지 --- */
+
+  /* 호출 결과 localStorage 캐시 (카테고리+페이지 단위, 1일 TTL) — 페이지/카테고리를
+     오갈 때마다 매번 API를 다시 부르지 않도록 함 */
+  /* v2: contentTypeId 고정을 풀어 결과가 달라져 기존 v1 캐시를 무효화 */
+  const spotCacheKey = (category, page) => `wtg:spotGrid:v2:${category}:${page}`;
+  function getSpotCache(category, page) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(spotCacheKey(category, page)) || 'null');
+      if (!cached || Date.now() - cached.ts > SPOT_CACHE_TTL_MS) return null;
+      return cached.items;
+    } catch { return null; }
+  }
+  function setSpotCache(category, page, items) {
+    try {
+      localStorage.setItem(spotCacheKey(category, page), JSON.stringify({ items, ts: Date.now() }));
+    } catch { /* 저장 실패(용량 초과 등) 무시 */ }
+  }
+
+  function renderSpotPager() {
+    if (!el.spotPagerLabel) return;
+    el.spotPagerLabel.textContent = `${state.spotPage}/${SPOT_TOTAL_PAGES}`;
+    el.spotPagerPrev.disabled = state.spotPage <= 1;
+    el.spotPagerNext.disabled = state.spotPage >= SPOT_TOTAL_PAGES;
+  }
+
+  function renderSpotItems(items) {
+    if (!items.length) {
+      el.spotGrid.innerHTML = `<li class="spot-grid__empty">표시할 여행지가 없어요</li>`;
+      return;
+    }
+    el.spotGrid.innerHTML = items.map((it) => `
       <li>
-        <button class="spot-grid__btn" type="button" data-dest="${t.destId}">
-          <img class="spot-grid__img" src="${t.img}" alt="" loading="lazy" />
-          <span class="spot-grid__name">${t.name}</span>
-        </button>
+        <a class="spot-grid__btn" href="detail.html?id=${it.contentid}&type=${it.contenttypeid}">
+          <img class="spot-grid__img" src="${it.firstimage || it.firstimage2 || SPOT_GRID_FALLBACK_IMG}" alt="" loading="lazy" />
+          <span class="spot-grid__name" title="${it.title.replace(/"/g, '&quot;')}">${it.title}</span>
+        </a>
       </li>`).join('');
+  }
+
+  let spotGridReqId = 0;
+  async function loadSpotGrid(category, page) {
+    state.spotCategory = category;
+    state.spotPage = page;
+    renderSpotPager();
+
+    const reqId = ++spotGridReqId;
+    const cached = getSpotCache(category, page);
+    if (cached) { renderSpotItems(cached); return; }
+
+    el.spotGrid.innerHTML = `<li class="spot-grid__empty">불러오는 중…</li>`;
+    try {
+      /* arrange:'Q' — 대표이미지가 반드시 있는 수정일순(최신순) 정렬. 매번 같은
+         순서로 오는 결정적 목록이라, 페이지를 넘겨야 서로 다른 여행지가 나옴.
+         contentTypeId는 비워서 관광지(12)로만 좁히지 않고 문화시설·음식점·쇼핑 등
+         분류체계(lclsSystm1)에 걸리는 모든 타입이 나오게 함 */
+      const items = await TourAPI.getTravelList({
+        numOfRows: SPOT_PAGE_SIZE, pageNo: page, arrange: 'Q', lclsSystm1: CATEGORY_LCLS[category],
+        contentTypeId: null,
+      });
+      if (reqId !== spotGridReqId) return; /* 응답 오는 사이 다른 카테고리/페이지가 선택됨 */
+      setSpotCache(category, page, items);
+      renderSpotItems(items);
+    } catch (err) {
+      console.error('여행지 목록 로드 실패:', err);
+      if (reqId === spotGridReqId) el.spotGrid.innerHTML = `<li class="spot-grid__empty">여행지를 불러오지 못했어요</li>`;
+    }
   }
 
   /* --- 테마별 추천 --- */
@@ -442,19 +516,6 @@ import { getPopularRegions } from './popArea.js';
      이벤트 바인딩
      ============================================================ */
   function bindEvents() {
-    /* GNB */
-    $$('.gnb__item').forEach((item) => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        $$('.gnb__item').forEach((i) => {
-          i.classList.remove('is-active');
-          i.removeAttribute('aria-current');
-        });
-        item.classList.add('is-active');
-        item.setAttribute('aria-current', 'page');
-      });
-    });
-
     /* 교통수단 */
     if (el.transportList) {
       el.transportList.addEventListener('click', (e) => {
@@ -471,23 +532,32 @@ import { getPopularRegions } from './popArea.js';
       });
     }
 
-    /* 카테고리 필터 칩 (TourAPI cat1 연동 전까지는 활성 표시만 전환) */
+    /* 카테고리 필터 칩 → TourAPI 분류체계로 spotGrid 재조회 (1페이지부터) */
     if (el.categoryFilter) {
       el.categoryFilter.addEventListener('click', (e) => {
         const chip = e.target.closest('[data-cat]');
         if (!chip) return;
         $$('.chip--filter', el.categoryFilter).forEach((c) => c.classList.remove('is-active'));
         chip.classList.add('is-active');
+        loadSpotGrid(chip.dataset.cat, 1);
       });
     }
 
-    /* 인기 여행지 그리드 · 테마 카드 (지도 마커는 기능 보류로 제외) */
-    [el.spotGrid, el.themeTrack].filter(Boolean).forEach((root) => {
-      root.addEventListener('click', (e) => {
+    /* spotGrid 페이지네이션 ("< 1/5 >") */
+    if (el.spotPagerPrev) {
+      el.spotPagerPrev.addEventListener('click', () => loadSpotGrid(state.spotCategory, state.spotPage - 1));
+    }
+    if (el.spotPagerNext) {
+      el.spotPagerNext.addEventListener('click', () => loadSpotGrid(state.spotCategory, state.spotPage + 1));
+    }
+
+    /* 테마 카드 (지도 마커는 기능 보류로 제외) */
+    if (el.themeTrack) {
+      el.themeTrack.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-dest]');
         if (btn) selectDestination(btn.dataset.dest);
       });
-    });
+    }
 
     /* 인기 지역 — 클릭하면 오늘의 여행지 대신 지도에서 해당 시/군/구를 선택 상태로 표시 */
     if (el.popularList) {
@@ -657,7 +727,7 @@ import { getPopularRegions } from './popArea.js';
      ============================================================ */
   function init() {
     renderPopular();
-    renderSpotGrid();
+    loadSpotGrid('전체', 1);
     renderThemes();
     el.originLabel.textContent = state.origin;
     restoreGeoState();

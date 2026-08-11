@@ -113,13 +113,13 @@ const TourAPI = ( () => {
 // -------------------------------------------------------------------------------------------------------------------
 
     // ── 여행지 목록 ──────────────────────────────────────────────────
-
-  function getTravelList({ numOfRows = 100, pageNo = 1, arrange = 'C', lDongRegnCd, lDongSignguCd } = {}) {
+  function getTravelList({ numOfRows = 100, pageNo = 1, arrange = 'C', lDongRegnCd, lDongSignguCd, lclsSystm1, lclsSystm2, lclsSystm3, contentTypeId = CONTENT_TYPE.TRAVEL } = {}) {
     return callApi('areaBasedList2', {
       numOfRows, pageNo, arrange,
-      contentTypeId: CONTENT_TYPE.TRAVEL,
+      contentTypeId, // null/undefined로 넘기면 관광타입 구분 없이(관광지·문화시설·음식점 등 전체) 조회
       lDongRegnCd, // 법정동 시도코드 (예: '11'=서울). 생략하면 지역 구분 없이 조회
       lDongSignguCd, // 법정동 시군구코드. lDongRegnCd와 함께 넘겨야 유효함
+      lclsSystm1, lclsSystm2, lclsSystm3, // 분류체계 대/중/소분류 (예: NA=자연관광, HS=역사관광). 분류체계 코드 조회 참고
     });
   }
 
