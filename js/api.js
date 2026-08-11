@@ -93,6 +93,7 @@ const TourAPI = ( () => {
         throw new Error(`TourAPI 오류: ${header?.resultMsg || '알 수 없는 오류'}`);
         }
 
+        // 데이터 정규화
         // body.itmes.item이 없으면 ( ?? 연산자 ) 빈 배열로 처리
         let items = data.response.body?.items?.item ?? []; 
         items = Array.isArray(items) ? items : [items]; // items이 배열이 아니라면 객체를 배열에 넣어서 배열로 형태로 변환시킴
@@ -230,6 +231,7 @@ const TourAPI = ( () => {
     return { common, intro, images, extraInfo };
   }
 
+  // 즉시 실행함수에 선언된 비공개 함수들을 밖에서 호출할 수 있도록 객체로 함수 이름을 반환
   return {
     CONTENT_TYPE,
     getTravelList,
