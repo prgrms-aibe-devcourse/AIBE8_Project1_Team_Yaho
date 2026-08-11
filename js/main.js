@@ -32,9 +32,8 @@ import { getPopularRegions } from './popArea.js';
   const state = {
     destId: 'gangneung',
     transport: 'car',
-    origin: '서울특별시 강남구',
+    origin: null,
     originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
-    useGeo: JSON.parse(localStorage.getItem('wtg:useGeo') || 'false'),
     /* "찜한 여행지" 카운트 — 오늘의 여행지(todaySpot.js)도 같은 키를 공유해서 찜한다 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '[]')),
     themeIndex: 0,
@@ -70,31 +69,18 @@ import { getPopularRegions } from './popArea.js';
   function setGeoCache(origin, originId) {
     localStorage.setItem('wtg:geo', JSON.stringify({ origin, originId, ts: Date.now() }));
   }
-  function setUseGeo(on) {
-    state.useGeo = on;
-    localStorage.setItem('wtg:useGeo', JSON.stringify(on));
-    el.btnGeo.classList.toggle('is-off', !on);
-    el.geoLabel.textContent = on ? '내 위치 사용 중' : '내 위치 사용 안 함';
-  }
 
-  /* --- 새로고침 후 "내 위치 사용 중" 상태 복원 --- */
-  function restoreGeoState() {
-    if (!state.useGeo) return;
-    const cached = getGeoCache();
-    if (cached) {
-      state.origin = cached.origin;
-      state.originId = cached.originId;
-      el.originLabel.textContent = state.origin;
-      setUseGeo(true);
-      return;
-    }
-    if (!navigator.geolocation) { setUseGeo(false); return; }
-    el.geoLabel.textContent = '위치 확인 중…';
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
-      () => setUseGeo(false),
-      { maximumAge: GEO_TTL_MS }
-    );
+  /* --- 지역선택 라벨 갱신 + 지도에서 그 시/군/구로 확대·강조·미리보기 ---
+     selectSigunguCode()가 아직 그 시/도로 확대 안 된 상태면 내부에서 zoomToRegion()을
+     먼저 돌리는데, zoomToRegion()이 끝나면서 미리보기 패널을 닫아버림 — 확대가 끝난 뒤에
+     showRegionPreview()를 불러야 뜬 패널이 곧바로 닫히지 않음 */
+  async function goToMyRegion(origin, originId) {
+    state.origin = origin;
+    state.originId = originId;
+    el.originLabel.textContent = origin;
+    if (!mapApi) return;
+    await mapApi.selectSigunguCode(originId);
+    mapApi.showRegionPreview(originId.slice(0, 2), originId);
   }
 
   /* ---------- DOM ---------- */
@@ -305,7 +291,7 @@ import { getPopularRegions } from './popArea.js';
   function resolveOriginFromCoords(lat, lng) {
     if (!window.naver || !naver.maps.Service) {
       showToast('지도 API 로드에 실패했어요');
-      setUseGeo(false);
+      el.geoLabel.textContent = '내 위치로 이동';
       return;
     }
     naver.maps.Service.reverseGeocode(
@@ -314,9 +300,9 @@ import { getPopularRegions } from './popArea.js';
         orders: [naver.maps.Service.OrderType.ADDR].join(','),
       },
       (status, res) => {
+        el.geoLabel.textContent = '내 위치로 이동';
         if (status !== naver.maps.Service.Status.OK) {
           showToast('위치를 주소로 변환하지 못했어요');
-          setUseGeo(false);
           return;
         }
         const region = res.v2.results[0]?.region;
@@ -324,7 +310,6 @@ import { getPopularRegions } from './popArea.js';
         const sigunguName = region?.area2?.name;
         if (!sidoName || !bjdCodes) {
           showToast('지역을 특정하지 못했어요');
-          setUseGeo(false);
           return;
         }
         const sidoId = Object.keys(bjdCodes.sido).find((id) => bjdCodes.sido[id] === sidoName);
@@ -332,12 +317,13 @@ import { getPopularRegions } from './popArea.js';
           ? Object.keys(bjdCodes.sigungu).find((id) => id.startsWith(sidoId) && bjdCodes.sigungu[id] === sigunguName)
           : null;
 
-        state.origin = sigunguName ? `${sidoName} ${sigunguName}` : sidoName;
-        state.originId = sigunguId || sidoId || null;
-        setGeoCache(state.origin, state.originId);
-        setUseGeo(true);
-        el.originLabel.textContent = state.origin;
-        showToast(`출발지를 ${state.origin}로 설정했어요`);
+        if (!sigunguId) {
+          showToast('지역을 특정하지 못했어요');
+          return;
+        }
+        const origin = `${sidoName} ${sigunguName}`;
+        setGeoCache(origin, sigunguId);
+        goToMyRegion(origin, sigunguId);
       }
     );
   }
@@ -617,29 +603,22 @@ import { getPopularRegions } from './popArea.js';
       state.originId = btn.dataset.id;
       el.originLabel.textContent = state.origin;
       closeOriginDropup();
-      showToast(`출발지를 ${state.origin}로 변경했어요`);
+      showToast(`${state.origin} 여행지를 살펴보세요`);
+      if (mapApi) mapApi.showRegionPreview(originSidoPick, btn.dataset.id);
     });
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.origin')) closeOriginDropup();
     });
 
-    /* 내 위치 사용 — geolocation → 네이버 리버스 지오코딩으로 시/군/구 특정
-       - localStorage 캐시(TTL 10분): 껐다 켜거나 새로고침해도 만료 전이면 API 재호출 안 함
-       - maximumAge: 브라우저가 최근 측위 결과 있으면 GPS 재측위 자체를 스킵
-       - 버튼 눌렀을 때만 호출 (자동 갱신 없음) */
+    /* 내 위치로 이동 — 누를 때마다 geolocation → 네이버 리버스 지오코딩으로 시/군/구 특정해서
+       바로 그 지역으로 지도 확대 + 강조 (토글 아님, 매번 한 번씩 실행되는 동작).
+       - localStorage 캐시(TTL 10분): 짧은 시간 안에 다시 누르면 API 재호출 없이 캐시로 바로 이동
+       - maximumAge: 브라우저가 최근 측위 결과 있으면 GPS 재측위 자체를 스킵 */
     el.btnGeo.addEventListener('click', () => {
-      if (state.useGeo) {
-        setUseGeo(false);
-        return;
-      }
       const cached = getGeoCache();
       if (cached) {
-        state.origin = cached.origin;
-        state.originId = cached.originId;
-        el.originLabel.textContent = state.origin;
-        setUseGeo(true);
-        showToast(`출발지를 ${state.origin}로 설정했어요`);
+        goToMyRegion(cached.origin, cached.originId);
         return;
       }
       if (!navigator.geolocation) {
@@ -651,7 +630,7 @@ import { getPopularRegions } from './popArea.js';
         (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
         () => {
           showToast('위치 권한이 거부됐어요');
-          el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
+          el.geoLabel.textContent = '내 위치로 이동';
         },
         { maximumAge: GEO_TTL_MS }
       );
@@ -683,8 +662,6 @@ import { getPopularRegions } from './popArea.js';
     renderPopular();
     loadSpotGrid('전체', 1);
     renderThemes();
-    el.originLabel.textContent = state.origin;
-    restoreGeoState();
 
     selectDestination(state.destId, { toast: false });
     renderSavedCount();

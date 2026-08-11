@@ -195,8 +195,6 @@ body {
 .chip .ico { width: 14px; height: 14px; color: var(--blue-500); }
 .chip--geo { transition: background-color .18s var(--ease), color .18s var(--ease); }
 .chip--geo:hover { background: var(--blue-100); color: var(--blue-700); }
-.chip--geo.is-off { background: #f1f5f9; color: var(--ink-500); }
-.chip--geo.is-off .ico { color: var(--ink-400); }
 
 .filter-row {
   display: flex;

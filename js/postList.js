@@ -56,9 +56,11 @@
     return raw;
   }
 
-  // URL 파라미터로 초기 탭 설정
+  // URL 파라미터로 초기 탭/지역 설정 (지도에서 지역 클릭 시 area=시도코드&sigungu=시군구코드로 진입)
   let params = new URLSearchParams(window.location.search);
   if (params.get('tab') === 'festival') activeTab = 'festival';
+  let initialArea    = params.get('area');
+  let initialSigungu = params.get('sigungu');
 
   // ── TourAPI 원본 → 카드용 데이터로 변환 ─────────────────────────────
   function mapTravelItem(item) {
@@ -155,6 +157,7 @@
       festivalPosts = dedupeById(results[1]).map(mapFestivalItem);
       loaded = true;
       loadError = null;
+      applyInitialRegionFromUrl();
     } catch (err) {
       console.error(err);
       loadError = err.message || '데이터를 불러오지 못했습니다.';
@@ -251,6 +254,42 @@
     }
     render();
     document.querySelector('.tabs').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── URL로 넘어온 지역(area/sigungu)을 선택된 상태로 적용 ───────────────
+  // area는 법정동 시도코드(예: '41'), sigungu는 지도 쪽에서 넘어오는 5자리 법정동 코드(예: '41360').
+  // TourAPI(ldongCode2)는 시군구를 5자리 전체가 아니라 시도코드를 뺀 뒤 3자리 코드로 내려주므로
+  // (예: '41360' → '360') 앞 2자리(시도)를 떼어내야 목록/필터의 code와 매칭된다.
+  // 광주/전남처럼 TourAPI가 하나의 시도로 통합해서 내려주는 지역은 mergedSignguSplit에서
+  // sigungu코드로 실제 분리 pill('12-gj'/'12-jn')을 찾아 그걸 시도 pill로 사용한다.
+  function applyInitialRegionFromUrl() {
+    if (!initialArea) return;
+
+    let sigunguCode = initialSigungu && initialSigungu.length > 2 ? initialSigungu.slice(2) : initialSigungu;
+
+    let pillCode = initialArea;
+    // area가 그 자체로 pill이면(대부분의 시도) 그대로 사용 — mergedSignguSplit의 3자리 코드는
+    // 시도가 달라도 겹칠 수 있어서, area가 pill로 못 찾아질 때(광주/전남처럼 통합된 시도)만
+    // sigungu코드로 분리 pill을 역추적한다.
+    if (!areas.some(function (a) { return a.code === pillCode; })) {
+      for (let base in mergedSignguSplit) {
+        if (sigunguCode && mergedSignguSplit[base][sigunguCode]) {
+          pillCode = mergedSignguSplit[base][sigunguCode];
+          break;
+        }
+      }
+    }
+    if (!areas.some(function (a) { return a.code === pillCode; })) return;
+
+    activeAreaCode   = pillCode;
+    sigunguPanelOpen = true;
+    ensureSigunguList(pillCode).then(function (list) {
+      if (sigunguCode && list.some(function (s) { return s.code === sigunguCode; })) {
+        activeSigunguCode = sigunguCode;
+        ensureSigunguPosts(pillCode, sigunguCode);
+      }
+      render();
+    });
   }
 
   // ── 시군구 클릭 ───────────────────────────────────────────────────────
