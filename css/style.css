@@ -55,9 +55,9 @@
 
   /* Metrics */
   --header-h: 92px;
-  --gutter: 40px;
-  --col-left: 267px;
-  --col-right: 311px;
+  --gutter: 24px;
+  --col-left: 216px;
+  --col-right: 256px;
   --gap: 16px;
 
   --ease: cubic-bezier(.22, .61, .36, 1);
@@ -131,6 +131,13 @@ body {
   border-radius: 12px;
 }
 
+.btn--outline {
+  background: #fff;
+  color: var(--blue-600);
+  border: 1.5px solid var(--blue-200, var(--blue-500));
+}
+.btn--outline:hover { background: var(--blue-50); }
+
 .icon-btn {
   position: relative;
   display: grid;
@@ -191,8 +198,22 @@ body {
 .chip--geo.is-off { background: #f1f5f9; color: var(--ink-500); }
 .chip--geo.is-off .ico { color: var(--ink-400); }
 
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 9px 0 12px;
+}
+.chip--filter {
+  cursor: pointer;
+  transition: background-color .18s var(--ease), color .18s var(--ease);
+}
+.chip--filter:hover { background: var(--blue-100); }
+.chip--filter.is-active { background: var(--blue-500); color: #fff; }
+.chip--filter.is-active .ico { color: #fff; }
+
 /* --- 블록 헤더 --- */
-.block { padding-top: 15px; }
+.block { padding-top: 4px; }
 .block + .block { border-top: 1px solid var(--line); }
 
 .block__head {
@@ -201,7 +222,7 @@ body {
   justify-content: space-between;
   gap: 8px;
 }
-.block__head--pad { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.block__head--pad { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .block__title {
   display: flex;
@@ -246,7 +267,7 @@ body {
   display: flex;
   align-items: center;
   gap: 24px;
-  max-width: 1402px;
+  max-width: 1600px;
   height: 100%;
   margin: 0 auto;
   padding: 0 var(--gutter);
@@ -306,7 +327,7 @@ body {
   grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
   gap: var(--gap);
   align-items: start;
-  max-width: 1402px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 20px var(--gutter) 40px;
 }
@@ -321,6 +342,13 @@ body {
 .panel--left  { grid-column: 1; grid-row: 1; }
 .map          { grid-column: 2; grid-row: 1; }
 .panel--right { grid-column: 3; grid-row: 1; }
+
+.panel--left,
+.panel--right {
+  max-height: calc(100vh - var(--header-h) - 80px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .themes       { grid-column: 2 / -1; grid-row: 2; }
 
 /* ------------------------------------------------------------
@@ -404,11 +432,13 @@ body {
 .origin__select[aria-expanded="true"] .ico--chevron { transform: rotate(90deg); }
 .origin__select .ico--chevron { transition: transform .2s var(--ease); }
 
+/* 사이드바 폭에 안 잘리도록 position: fixed로 버튼 오른쪽에 띄움 (JS가 open 시 left/top 계산) */
 .origin__list {
-  position: absolute;
-  inset: calc(100% + 6px) 0 auto;
-  z-index: 20;
-  max-height: 216px;
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  max-height: 320px;
+  margin: 0;
   padding: 5px;
   overflow-y: auto;
   border: 1px solid var(--line-2);
@@ -416,15 +446,23 @@ body {
   background: #fff;
   box-shadow: var(--sh-3);
 }
-.origin__list li {
+.origin__list li + li { margin-top: 1px; }
+.origin__list button {
+  display: block;
+  width: 100%;
   padding: 9px 11px;
+  border: none;
   border-radius: 8px;
+  background: none;
+  color: var(--ink-800);
+  font: inherit;
   font-size: 13.5px;
+  text-align: left;
   cursor: pointer;
   transition: background-color .14s var(--ease);
 }
-.origin__list li:hover { background: var(--blue-50); }
-.origin__list li[aria-selected="true"] { color: var(--blue-600); font-weight: 700; background: var(--blue-50); }
+.origin__list button:hover { background: var(--blue-50); }
+.origin__list-back { color: var(--ink-500) !important; font-weight: 600; }
 
 .chip--geo { margin-top: 9px; }
 
@@ -511,7 +549,6 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  padding-top: 15px;
 }
 
 .spot-grid__btn {
@@ -558,112 +595,8 @@ body {
 .hint .ico { width: 15px; height: 15px; color: var(--blue-400, #8ab0f0); }
 
 /* ------------------------------------------------------------
-   6. 지도 + 마커
-   ------------------------------------------------------------ */
-.map {
-  container-type: inline-size;
-  position: relative;
-  aspect-ratio: 722 / 852;
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.map__img { width: 100%; height: 100%; object-fit: cover; }
-
-.map__markers { position: absolute; inset: 0; }
-
-.marker {
-  position: absolute;
-  z-index: 2;
-  width: 9.14cqw;
-  height: 9.14cqw;
-  border-radius: var(--r-pill);
-  background: #fff;
-  transform: translate(-50%, -50%);
-  transform-origin: 50% 78%;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, .22);
-  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
-}
-
-/* 핀 꼬리 */
-.marker::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -.8cqw;
-  width: 2.1cqw;
-  height: 2.1cqw;
-  background: #fff;
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 0 0 .5cqw 0;
-  z-index: -1;
-}
-
-.marker__img {
-  width: 100%;
-  height: 100%;
-  padding: 3.5%;
-  border-radius: var(--r-pill);
-  object-fit: cover;
-  transform: scale(1.16);
-  transform-origin: 50% 50%;
-  clip-path: circle(46% at 50% 50%);
-}
-
-.marker:hover,
-.marker:focus-visible {
-  z-index: 5;
-  transform: translate(-50%, -50%) scale(1.14);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, .3);
-}
-
-.marker.is-active {
-  z-index: 4;
-  box-shadow: 0 0 0 3px var(--blue-500), 0 8px 20px rgba(37, 99, 235, .38);
-}
-
-/* 뽑기 중 하이라이트 */
-.marker.is-rolling {
-  z-index: 6;
-  transform: translate(-50%, -50%) scale(1.2);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, .55), 0 10px 24px rgba(37, 99, 235, .4);
-}
-
-/* 뽑기 당첨 연출 */
-.marker.is-won { animation: marker-pop .7s var(--ease); }
-@keyframes marker-pop {
-  0%   { transform: translate(-50%, -50%) scale(1); }
-  35%  { transform: translate(-50%, -50%) scale(1.38); }
-  65%  { transform: translate(-50%, -50%) scale(.96); }
-  100% { transform: translate(-50%, -50%) scale(1); }
-}
-
-/* 마커 툴팁 */
-.map__tip {
-  position: absolute;
-  z-index: 10;
-  padding: 7px 12px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, .88);
-  color: #fff;
-  font-size: 12.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translate(-50%, -100%);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, .28);
-}
-.map__tip::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -4px;
-  width: 9px;
-  height: 9px;
-  background: inherit;
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 0 0 2px 0;
-}
-.map__tip small { display: block; font-weight: 400; color: rgba(255, 255, 255, .68); font-size: 11px; }
+   6. 지도 + 마커 → css/map.css 로 분리
+------------------------------------------------------------ */
 
 /* ------------------------------------------------------------
    7. 우측 패널
@@ -678,7 +611,7 @@ body {
 .today__media { position: relative; }
 .today__img {
   width: 100%;
-  aspect-ratio: 274 / 170;
+  aspect-ratio: 274 / 150;
   border-radius: 12px;
   object-fit: cover;
   background: linear-gradient(160deg, #cfe6f7, #a9d3ee);
@@ -737,7 +670,7 @@ body {
 }
 
 .today__desc {
-  margin: 12px 0 0 7px;
+  margin: 8px 0 0 7px;
   color: var(--ink-600);
   font-size: 12.8px;
   line-height: 1.62;
@@ -748,21 +681,13 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 9px;
-  margin: 13px 5px 0;
+  margin: 10px 5px 0;
 }
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  border: 1px solid #e6eef6;
-  border-radius: 10px;
-  background: #fff;
-}
+
 .stat .ico { width: 21px; height: 21px; stroke-width: 1.5; }
 .stat > div { min-width: 0; display: flex; flex-direction: column; }
 .stat__label { color: var(--ink-500); font-size: 10.5px; }
-.stat__value { font-size: 13px; font-weight: 700; letter-spacing: -.02em; }
+.stat__value { font-size: 13px; font-weight: 700; letter-spacing: -.02em;}
 
 /* --- 교통 정보 --- */
 .fares { display: flex; flex-direction: column; gap: 9px; }
@@ -790,6 +715,33 @@ body {
 .fare__label { font-size: 13.5px; font-weight: 700; }
 .fare__time  { color: var(--ink-500); font-size: 11.5px; }
 .fare__cost  { font-size: 13.5px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+
+/* --- 내 여행 기록 --- */
+.my-record {
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--tint);
+  line-height: 200%;
+}
+.my-record__msg {
+  margin: 0 0 10px;
+  color: var(--ink-600);
+  font-size: 12.8px;
+  line-height: 1.5;
+}
+.my-record .stats { margin: 0 0 10px; }
+.my-record__btn {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--blue-600);
+  font-weight: 600;
+  font-size: 13.5px;
+  transition: background-color .16s var(--ease), border-color .16s var(--ease);
+}
+.my-record__btn:hover { background: var(--blue-50); border-color: var(--blue-200); }
 
 /* ------------------------------------------------------------
    8. 테마별 추천 캐러셀
@@ -921,12 +873,12 @@ body {
 
 /* 넓은 화면 — 여백만 조금 더 */
 @media (min-width: 1500px) {
-  :root { --col-left: 288px; --col-right: 332px; --gap: 20px; }
+  :root { --gutter: 32px; --col-left: 250px; --col-right: 276px; --gap: 20px; }
 }
 
 /* 노트북 */
 @media (max-width: 1360px) {
-  :root { --gutter: 24px; --col-left: 252px; --col-right: 296px; }
+  :root { --gutter: 20px; --col-left: 208px; --col-right: 244px; }
   .gnb__item { padding: 0 12px; font-size: 14px; }
   .logo__sub { display: none; }
 }

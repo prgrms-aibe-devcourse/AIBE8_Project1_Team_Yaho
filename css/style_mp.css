@@ -1,0 +1,196 @@
+/* ============================================================
+   style.css - 공통 스타일
+   --------------------------------------------------------------
+   여기에는 "2개 이상의 페이지에서 같이 쓰는" 것만 둔다.
+   페이지 하나에서만 쓰는 스타일은 각 페이지 전용 css로 옮겼다:
+     - login.css          : login.html 전용
+     - mypage.css          : mypage.html 전용
+     - album-list.css      : album.html 전용
+     - album-detail.css    : album-detail.html 전용
+     - album-edit.css      : album-edit.html 전용
+     - bookmark.css        : bookmark.html 전용
+   ============================================================ */
+
+:root{
+  --bg: #ffffff;
+  --card-bg: #ffffff;
+  --sidebar-tint: linear-gradient(135deg,#dcedf8,#b8dbef);
+  --sidebar-highlight: #dde3fb;
+  --indigo: #4c4fe0;
+  --navy-dark: #1e3a5f;
+  --blue-mid: #4a7fc1;
+  --text-main: #1c212b;
+  --text-muted: #8b93a1;
+  --danger: #e2574c;
+  --orange: #f0a02c;
+  --line: #edf0f4;
+  --radius-lg: 26px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
+}
+
+/* ---------------- 전역 리셋 ---------------- */
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; background: var(--bg); color: var(--text-main); }
+body{ min-height:100vh; }
+.page{ min-height:100vh; }
+button{ font-family: inherit; cursor:pointer; }
+input, textarea{ font-family: inherit; }
+.muted{ color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
+
+/* ---------------- 여러 페이지가 함께 쓰는 버튼/상태 컴포넌트 ---------------- */
+.pill-btn{
+  display:inline-block; text-decoration:none;
+  border:none; border-radius: 100px; padding: 10px 22px; font-weight: 700; font-size: 13.5px;
+  background: linear-gradient(100deg, var(--navy-dark), var(--indigo));
+  color:#fff;
+}
+.pill-btn-solid{
+  background: linear-gradient(100deg,#2f56c8,#4a90d9);
+}
+
+/* mypage(프로필 사진 변경) + album-detail(수정하기) 에서 함께 쓰는 아웃라인 버튼 */
+.outline-btn{
+  display: inline-block; text-decoration:none;
+  border: 1.5px solid #cfe0f0; background: #fafcfe; border-radius: 100px;
+  padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--indigo);
+  margin-top: 10px;
+}
+.outline-btn:hover{ background: #eef5fb; }
+
+/* album-detail("← 앨범 목록으로") + album-edit("← 뒤로가기") 가 함께 쓰는 뒤로가기 버튼 */
+.back-link{
+  background:none; border:none; color: var(--text-muted); font-size: 13px; font-weight:600;
+  margin-bottom: 18px; padding:0;
+}
+.back-link:hover{ color: var(--indigo); }
+
+/* album-list / album-edit / bookmark 가 함께 쓰는 "비어있음" 안내 문구 */
+.empty-state{ color: var(--text-muted); font-size: 14px; padding: 40px 0; text-align:center; }
+
+/* ---------------- 색상 선택 팝오버 (album-list 카드 + album-edit 색상 필드가 함께 씀) ---------------- */
+/* ⚠️ display:grid 를 항상 켜두면 브라우저 기본 규칙인 [hidden]{display:none} 을
+      덮어써버려서, hidden 속성을 줘도 팝오버가 계속 보이는 문제가 생긴다.
+      그래서 hidden이 아닐 때만 grid로 보이게 하고, hidden일 땐 확실히 숨긴다. */
+.color-popover{
+  position:absolute; z-index: 20; margin-top: 8px;
+  background:#fff; border-radius: 14px; padding: 12px;
+  box-shadow: 0 14px 34px -10px rgba(20,50,90,0.35);
+  grid-template-columns: repeat(5, 1fr); gap: 8px;
+  width: 176px;
+}
+.color-popover:not([hidden]){ display: grid; }
+.color-popover[hidden]{ display: none; }
+.color-popover.pos-below{ top: 100%; left: 0; }
+.color-swatch{
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent;
+  cursor:pointer; padding:0;
+}
+.color-swatch.is-selected{ border-color: #1c212b; box-shadow: 0 0 0 2px #fff inset; }
+.custom-color-wrap{ grid-column: 1 / -1; display:flex; align-items:center; gap:8px; margin-top: 4px; }
+.custom-color-wrap input[type="color"]{
+  width: 26px; height: 26px; border:none; border-radius: 50%; overflow:hidden; padding:0; cursor:pointer;
+}
+.custom-color-wrap span{ font-size: 11.5px; color: var(--text-muted); }
+
+/* ============ 앱 셸: topnav.js / sidebar.js 가 그려주는 부분 ============ */
+.app-page{ display:flex; flex-direction: column; min-height:100vh; }
+
+.topnav{
+  display:flex; align-items:center; gap: 30px;
+  background: rgba(255,255,255,0.55);
+  margin: 24px 32px 0;
+  padding: 14px 26px;
+  border-radius: 100px;
+  box-shadow: 0 6px 20px -10px rgba(30,58,95,0.15);
+}
+.brand{ display:flex; align-items:center; gap:10px; cursor:pointer; margin-right: 10px; }
+.brand-icon{
+  width:38px; height:38px; border-radius:50%;
+  background: linear-gradient(135deg,#3b5fd9,#5aa7e0);
+  display:flex; align-items:center; justify-content:center;
+}
+.brand-text{ display:flex; flex-direction:column; line-height:1.25; }
+.brand-text strong{ font-size: 15px; }
+.brand-text span{ font-size: 11px; color: var(--text-muted); }
+
+.main-menu{ display:flex; gap: 34px; flex:1; }
+.menu-item{
+  text-decoration:none; color: var(--text-main); font-weight: 500; font-size: 14.5px;
+  padding-bottom: 4px; position:relative;
+}
+.menu-item.active{ color: var(--indigo); font-weight:700; }
+.menu-item.active::after{
+  content:''; position:absolute; left:0; right:0; bottom:-4px; height:2px; background: var(--indigo);
+}
+.menu-item.soon{ opacity:.85; }
+
+.app-body{ display:flex; flex:1; gap: 24px; margin: 24px 32px 40px; align-items:flex-start; }
+
+.sidebar{ width: 250px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; }
+
+/* topnav.js / sidebar.js가 채워 넣는 호스트 div도
+   원래 .sidebar가 갖던 flex 크기를 그대로 유지하도록 함 */
+#app-sidebar{ width: 250px; flex-shrink:0; }
+#app-topnav{ display: contents; }
+.profile-card{
+  background: var(--sidebar-tint);
+  border-radius: var(--radius-md);
+  padding: 22px 18px;
+  display:flex; align-items:center; gap: 14px;
+  margin-bottom: 6px;
+}
+.avatar{
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink:0;
+  background: radial-gradient(circle at 35% 30%, #eef8fd, #63c1e3 60%, #2f8fc4);
+  display:inline-block; background-size: cover; background-position:center;
+}
+.avatar-lg{ width: 90px; height: 90px; }
+.profile-text{ display:flex; flex-direction:column; line-height:1.3; }
+.profile-text strong{ font-size: 14.5px; }
+.profile-text span{ font-size: 12px; color: var(--text-muted); }
+
+.side-menu-item{
+  display:flex; align-items:center; gap:10px;
+  background:transparent; border:none; text-align:left; text-decoration:none;
+  padding: 14px 16px; border-radius: var(--radius-md);
+  font-size: 14.5px; font-weight: 600; color: var(--text-muted);
+}
+.side-menu-item.is-active{
+  background: var(--sidebar-highlight); color: var(--indigo); font-weight: 700;
+}
+.side-menu-item svg{ flex-shrink:0; }
+
+.content{
+  flex:1; background: var(--card-bg); border-radius: var(--radius-lg);
+  padding: 40px 44px; min-height: 640px;
+  box-shadow: 0 20px 50px -25px rgba(20,50,90,0.2);
+}
+.view-title{ font-size: 21px; font-weight: 800; margin: 0 0 26px; }
+.view-header-row{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 26px; }
+.view-header-row .view-title{ margin-bottom: 4px; }
+
+/* ============ 토스트 (모든 페이지 공통) ============ */
+.toast{
+  position: fixed; bottom: 34px; left:50%; transform: translateX(-50%) translateY(20px);
+  background: #1e2430; color:#fff; padding: 12px 22px; border-radius: 100px; font-size: 13.5px;
+  opacity:0; pointer-events:none; transition: all .25s; z-index: 999; font-weight:600;
+}
+.toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+/* ============ 공통 반응형 (앱 셸 레이아웃) ============ */
+@media (max-width: 900px){
+  .topnav{ flex-wrap:wrap; gap:14px; }
+  .main-menu{ order:3; width:100%; overflow-x:auto; gap:20px; }
+  .app-body{ flex-direction:column; margin: 16px; }
+  .sidebar{ width:100%; flex-direction:row; flex-wrap:wrap; }
+  #app-sidebar{ width:100%; }
+  .profile-card{ width:100%; }
+  .content{ padding: 26px 20px; }
+}
+
+/* 접근성: 키보드 포커스 표시 */
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible{
+  outline: 2px solid var(--indigo); outline-offset: 2px;
+}

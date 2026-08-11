@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사이트 이름 | 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/login.css">
+</head>
+<!-- data-page 속성으로 app.js 가 "지금 로그인 페이지구나"를 판별합니다 -->
+<body data-page="login">
+
+<div id="page-login" class="page login-page">
+  <div class="login-card">
+    <h1 class="login-title">로그인</h1>
+    <p class="login-sub">계정정보를 입력해주세요.</p>
+
+    <form id="login-form">
+      <label class="field-label" for="login-email">이메일</label>
+      <input class="text-input" type="email" id="login-email" placeholder="이메일 입력" value="traveler@gmail.com" required>
+
+      <label class="field-label" for="login-password">비밀번호</label>
+      <input class="text-input" type="password" id="login-password" placeholder="비밀번호 입력" value="********" required>
+
+      <button type="submit" class="btn-gradient login-btn">Log In</button>
+    </form>
+    <p class="login-hint">데모 계정입니다 · 아무 값이나 입력 후 로그인해보세요</p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/app.js"></script>
+</body>
+</html>

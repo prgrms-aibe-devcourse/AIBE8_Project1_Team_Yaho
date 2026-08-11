@@ -1,0 +1,362 @@
+/* ============================================================
+   map.css — 지도 컴포넌트 (지도 박스 / 시·도 영역 / 마커 / 뽑기 애니메이션)
+   ------------------------------------------------------------
+   style.css의 "6. 지도 + 마커" 섹션을 분리한 파일.
+   지도가 페이지 그리드 안에서 차지하는 위치(.layout 그리드 컬럼,
+   반응형 그리드 배치)는 페이지 레이아웃 관심사라 style.css 쪽
+   "4. 레이아웃 그리드" / "10. 반응형" 섹션에 그대로 남아있음.
+   ============================================================ */
+.map {
+  container-type: inline-size;
+  position: relative;
+  aspect-ratio: 722 / 852;
+  height: calc(100vh - var(--header-h) - 80px);
+  width: 100%;
+  max-width: 100%;
+  justify-self: center;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.map__bg {
+  position: absolute;
+  inset: 0;
+  background-image: url(../images/map-korea-bg.png);
+  width:100%;
+  background-size: cover;
+  background-position: center;
+}
+.map__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* 개요(전국) 지도 배경 이미지와 맞춘 미세 보정 — 시군구 상세 뷰는 해당 없음 */
+.map__img:not(.map__img--detail) {
+  transform: translate(5%, -1%);
+  transform-origin: center;
+}
+
+/* 시군구 상세 뷰: 원본 svg에 색이 없어서 기본 채우기/테두리를 직접 지정
+   --sido-color는 zoomToRegion()에서 클릭한 시/도 자신의 fill 색을 읽어와 세팅함 */
+.map__img--detail .region {
+  fill: var(--sido-color, var(--blue-200));
+  stroke: #fff;
+  stroke-width: .6;
+}
+/* 시군구는 뜨는 효과 없이 살짝 밝아지기만 */
+.map__img--detail .region:hover,
+.map__img--detail .region.is-rolling {
+  transform: none;
+  filter: brightness(1.08);
+}
+/* 클릭해서 선택 고정된 시군구 — 호버보다 좀 더 밝게, 계속 유지 */
+.map__img--detail .region.is-selected {
+  transform: none;
+  filter: brightness(1.16);
+}
+
+/* 시/도 (개요 지도) */
+.sido {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .18s var(--ease), filter .12s var(--ease);
+}
+.sido:hover {
+  transform: translateY(-4px) scale(1.03);
+  filter: brightness(1.06) drop-shadow(0 6px 10px rgba(15, 23, 42, .35));
+}
+/* 뽑기 진행 중 강조 — 살짝 밝아지며 외곽선이 빛나는 효과 (뜨는 효과는 없음) */
+.sido.is-rolling {
+  filter: brightness(1.06)
+    drop-shadow(0 0 3px #7a7575);
+}
+.sido.is-won { animation: sido-pop .7s var(--ease); }
+
+@keyframes sido-pop {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-10px) scale(1.08); }
+  65%  { transform: translateY(-2px) scale(.98); }
+  100% { transform: translateY(-4px) scale(1.03); }
+}
+
+/* 시군구 (상세 뷰) — 밝기만 살짝, 뜨는 효과 없음 */
+.region {
+  cursor: pointer;
+  transition: filter .18s var(--ease);
+}
+
+.map__back {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(4px);
+  color: var(--ink-800);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sh-2);
+  transition: background-color .16s var(--ease), transform .16s var(--ease);
+}
+.map__back .ico { width: 16px; height: 16px; }
+.map__back:hover { background: #fff; transform: translateX(-1px); }
+
+/* 호버/선택된 영역 지명 표시 + 클릭 시 시/도·시/군/구 선택 드롭업 */
+.map__label {
+  position: absolute;
+  z-index: 10;
+  right: 12px;
+  bottom: 12px;
+  margin: 12px;
+}
+.map__label-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: background-color .16s var(--ease);
+}
+.map__label-btn:hover,
+.map__label-btn[aria-expanded="true"] {
+  background: rgba(255, 255, 255, .55);
+}
+.map__label-sido {
+  font-size: 24px;
+  font-weight: 500;
+  color: #000;
+}
+.map__label-sigungu {
+  font-size: 36px;
+  font-weight: 700;
+  color: #000;
+}
+
+/* 클릭 시 라벨 기준 위로 떠오르는 드롭업 (시/도 · 시/군/구 목록) */
+.map__label-dropup {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  min-width: 180px;
+  max-width: 240px;
+  max-height: 280px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--sh-3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity .16s var(--ease), transform .16s var(--ease), visibility .16s;
+  pointer-events: none;
+}
+.map__label-dropup.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.map__label-dropup li + li { margin-top: 1px; }
+.map__label-dropup button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-800);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .14s var(--ease);
+}
+.map__label-dropup button:hover { background: var(--blue-50); }
+
+/* 시/군/구 랜덤 뽑기 모달 — 시/도 확정 후 지도 가운데에 떠서 텍스트 스피너로 시/군/구를 고름 */
+.sigungu-draw {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .32);
+}
+.sigungu-draw[hidden] { display: none; }
+
+.sigungu-draw__dialog {
+  position: relative;
+  width: min(82%, 300px);
+  padding: 22px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  box-shadow: var(--sh-3);
+  text-align: center;
+}
+
+.sigungu-draw__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--ink-500);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .14s var(--ease), color .14s var(--ease);
+}
+.sigungu-draw__close:hover { background: var(--tint); color: var(--ink-800); }
+
+.sigungu-draw__eyebrow {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-500);
+}
+
+.sigungu-draw__question {
+  margin: 0 0 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.sigungu-draw__spin {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  margin-bottom: 18px;
+  border-radius: var(--r-md);
+  background: var(--tint);
+  overflow: hidden;
+}
+.sigungu-draw__spin span {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-900);
+  animation: sigungu-spin-in .16s var(--ease);
+}
+@keyframes sigungu-spin-in {
+  from { transform: translateY(45%); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+.sigungu-draw__dialog .btn--cta { width: 100%; margin-top: 0; }
+
+.map__markers { position: absolute; inset: 0; pointer-events: none; }
+
+/* 핀(마커) 기능 보류 — 랜덤 뽑기에 미적용, 폐기 보류 상태라 전부 주석 처리
+.marker {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  width: 9.14cqw;
+  height: 9.14cqw;
+  border-radius: var(--r-pill);
+  background: #fff;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 78%;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .22);
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
+}
+
+.marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -.8cqw;
+  width: 2.1cqw;
+  height: 2.1cqw;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 0 0 .5cqw 0;
+  z-index: -1;
+}
+
+.marker__img {
+  width: 100%;
+  height: 100%;
+  padding: 3.5%;
+  border-radius: var(--r-pill);
+  object-fit: cover;
+  transform: scale(1.16);
+  transform-origin: 50% 50%;
+  clip-path: circle(46% at 50% 50%);
+}
+
+.marker:hover,
+.marker:focus-visible {
+  z-index: 5;
+  transform: translate(-50%, -50%) scale(1.14);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .3);
+}
+
+.marker.is-active {
+  z-index: 4;
+  box-shadow: 0 0 0 3px var(--blue-500), 0 8px 20px rgba(37, 99, 235, .38);
+}
+
+.marker.is-rolling {
+  z-index: 6;
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, .55), 0 10px 24px rgba(37, 99, 235, .4);
+}
+
+.marker.is-won { animation: marker-pop .7s var(--ease); }
+@keyframes marker-pop {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  35%  { transform: translate(-50%, -50%) scale(1.38); }
+  65%  { transform: translate(-50%, -50%) scale(.96); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+*/
+
+/* 마커 툴팁 */
+.map__tip {
+  position: absolute;
+  z-index: 10;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, .88);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .28);
+}
+.map__tip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 0 0 2px 0;
+}
+.map__tip small { display: block; font-weight: 400; color: rgba(255, 255, 255, .68); font-size: 11px; }

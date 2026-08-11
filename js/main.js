@@ -1,16 +1,18 @@
 /* ============================================================
    main.js — 화면 렌더링 & 인터랙션
    ============================================================ */
+import { TRANSPORTS, DESTINATIONS, POPULAR, THEMES } from './data.js';
+import { initMap } from './map.js';
+import { getPopularRegions } from './popArea.js';
+
 (function () {
   'use strict';
 
   /* ---------- 유틸 ---------- */
   const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const won = (n) => '약 ' + n.toLocaleString('ko-KR') + '원';
   const byId = (id) => DESTINATIONS.find((d) => d.id === id);
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const icon = (name, cls = 'ico') =>
     `<svg class="${cls}" aria-hidden="true"><use href="#${name}"></use></svg>`;
@@ -19,19 +21,75 @@
   const state = {
     destId: 'gangneung',
     transport: 'car',
-    origin: ORIGINS[0],
-    useGeo: true,
+    origin: '서울특별시 강남구',
+    originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
+    useGeo: JSON.parse(localStorage.getItem('wtg:useGeo') || 'false'),
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
     themeIndex: 0,
-    rolling: false,
+    popularRegions: null, /* getPopularRegions() 로딩 전까지는 null → 샘플 데이터로 자리 표시 */
+    /* 로그인 연동 전 데모용 — 실제로는 서버에서 받아와야 함 */
+    loggedIn: JSON.parse(localStorage.getItem('wtg:loggedIn') || 'false'),
+    recordStamps: 4,
+    recordJournals: 2,
   };
+
+  /* ---------- 출발지 드롭업 (시/도 → 시/군/구) ---------- */
+  let bjdCodes = null;
+  fetch('data/bjd-codes.json')
+    .then((res) => res.json())
+    .then((data) => { bjdCodes = data; })
+    .catch((err) => console.error('법정동 코드 로드 실패:', err));
+
+  let originLevel = 'sido';   /* 'sido' | 'sigungu' */
+  let originSidoPick = null;  /* 시군구 목록 조회 중인 시/도 코드 */
+  let mapApi = null;          /* initMap()이 반환하는 { selectSigunguCode } — 인기 지역 클릭 시 사용 */
+
+  /* --- 지오코딩 결과 캐시 (localStorage, TTL 10분) — 껐다 켜거나 새로고침해도 재호출 방지 --- */
+  const GEO_TTL_MS = 10 * 60 * 1000;
+  function getGeoCache() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('wtg:geo') || 'null');
+      if (!cached || Date.now() - cached.ts > GEO_TTL_MS) return null;
+      return cached;
+    } catch { return null; }
+  }
+  function setGeoCache(origin, originId) {
+    localStorage.setItem('wtg:geo', JSON.stringify({ origin, originId, ts: Date.now() }));
+  }
+  function setUseGeo(on) {
+    state.useGeo = on;
+    localStorage.setItem('wtg:useGeo', JSON.stringify(on));
+    el.btnGeo.classList.toggle('is-off', !on);
+    el.geoLabel.textContent = on ? '내 위치 사용 중' : '내 위치 사용 안 함';
+  }
+
+  /* --- 새로고침 후 "내 위치 사용 중" 상태 복원 --- */
+  function restoreGeoState() {
+    if (!state.useGeo) return;
+    const cached = getGeoCache();
+    if (cached) {
+      state.origin = cached.origin;
+      state.originId = cached.originId;
+      el.originLabel.textContent = state.origin;
+      setUseGeo(true);
+      return;
+    }
+    if (!navigator.geolocation) { setUseGeo(false); return; }
+    el.geoLabel.textContent = '위치 확인 중…';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
+      () => setUseGeo(false),
+      { maximumAge: GEO_TTL_MS }
+    );
+  }
 
   /* ---------- DOM ---------- */
   const el = {
     transportList: $('#transportList'),
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
+    categoryFilter: $('#categoryFilter'),
     markers:       $('#markers'),
     mapTip:        $('#mapTip'),
     fareList:      $('#fareList'),
@@ -48,6 +106,7 @@
     btnDraw:   $('#btnDraw'),
     btnLike:   $('#btnLike'),
     btnGo:     $('#btnGo'),
+    myRecord:  $('#myRecord'),
     btnGeo:    $('#btnGeo'),
     geoLabel:  $('#geoLabel'),
     btnSaved:  $('#btnSaved'),
@@ -83,12 +142,13 @@
     }).join('');
   }
 
-  /* --- 인기 지역 --- */
+  /* --- 인기 지역 (TourAPI 주간 방문자 수 기준 상위 4곳, 사진은 샘플 데이터 그대로 유지) --- */
   function renderPopular() {
-    el.popularList.innerHTML = POPULAR.map((p, i) => `
+    const list = state.popularRegions || POPULAR.map((p) => ({ title: p.title, desc: '불러오는 중…', sigunguCode: null }));
+    el.popularList.innerHTML = list.map((p, i) => `
       <li>
-        <button class="popular__btn" type="button" data-dest="${p.destId}">
-          <img class="popular__thumb" src="${p.thumb}" alt="" />
+        <button class="popular__btn" type="button" ${p.sigunguCode ? `data-sigungu="${p.sigunguCode}"` : ''}>
+          <img class="popular__thumb" src="${POPULAR[i].thumb}" alt="" />
           <span class="popular__rank">${i + 1}</span>
           <span class="popular__body">
             <span class="popular__name">${p.title}</span>
@@ -97,6 +157,22 @@
           ${icon('i-chevron-right', 'ico ico--chevron')}
         </button>
       </li>`).join('');
+  }
+
+  /* TourAPI 인기 지역 데이터 로딩 — 실패해도 샘플 자리표시 그대로 유지 */
+  async function loadPopularRegions() {
+    try {
+      const regions = await getPopularRegions();
+      if (!regions.length) return;
+      state.popularRegions = regions.map((r) => ({
+        title: r.sigunguNm,
+        desc: `주간 방문 ${r.visitorCount / 10000}만 명`,
+        sigunguCode: r.sigunguCode,
+      }));
+      renderPopular();
+    } catch (err) {
+      console.error('인기 지역 로드 실패:', err);
+    }
   }
 
   /* --- 인기 여행지 그리드 (좌측) --- */
@@ -108,19 +184,6 @@
           <span class="spot-grid__name">${t.name}</span>
         </button>
       </li>`).join('');
-  }
-
-  /* --- 지도 마커 --- */
-  function renderMarkers() {
-    el.markers.innerHTML = MAP_PINS.map((id) => {
-      const d = byId(id);
-      return `
-        <button class="marker" type="button" data-dest="${d.id}"
-                style="left:${d.map.x}%; top:${d.map.y}%"
-                aria-label="${d.region} ${d.name}">
-          <img class="marker__img" src="${d.marker || d.photo}" alt="" />
-        </button>`;
-    }).join('');
   }
 
   /* --- 테마별 추천 --- */
@@ -138,10 +201,80 @@
       </li>`).join('');
   }
 
-  /* --- 출발지 목록 --- */
-  function renderOrigins() {
-    el.originList.innerHTML = ORIGINS.map((o) => `
-      <li role="option" data-origin="${o}" aria-selected="${o === state.origin}">${o}</li>`).join('');
+  /* --- 출발지 드롭업 (시/도 목록 또는 선택된 시/도의 시/군/구 목록) --- */
+  function renderOriginDropup() {
+    if (!el.originList || !bjdCodes) return;
+
+    const items = originLevel === 'sigungu'
+      ? Object.keys(bjdCodes.sigungu)
+          .filter((id) => id.startsWith(originSidoPick))
+          .map((id) => ({ id, name: bjdCodes.sigungu[id] }))
+      : Object.keys(bjdCodes.sido).map((id) => ({ id, name: bjdCodes.sido[id] }));
+    items.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+    const back = originLevel === 'sigungu'
+      ? '<li><button type="button" class="origin__list-back" data-back="1">‹ 시/도 다시 선택</button></li>'
+      : '';
+    el.originList.innerHTML = back + items
+      .map((it) => `<li role="option"><button type="button" data-id="${it.id}">${it.name}</button></li>`)
+      .join('');
+  }
+
+  function openOriginDropup() {
+    originLevel = 'sido';
+    originSidoPick = null;
+    renderOriginDropup();
+    const rect = el.originSelect.getBoundingClientRect();
+    el.originList.style.left = `${rect.right + 10}px`;
+    el.originList.style.top  = `${rect.top}px`;
+    el.originSelect.setAttribute('aria-expanded', 'true');
+    el.originList.hidden = false;
+  }
+
+  function closeOriginDropup() {
+    el.originSelect.setAttribute('aria-expanded', 'false');
+    el.originList.hidden = true;
+  }
+
+  /* --- 좌표 → 시/도·시/군/구 (네이버 리버스 지오코딩 + bjd-codes 매칭) --- */
+  function resolveOriginFromCoords(lat, lng) {
+    if (!window.naver || !naver.maps.Service) {
+      showToast('지도 API 로드에 실패했어요');
+      setUseGeo(false);
+      return;
+    }
+    naver.maps.Service.reverseGeocode(
+      {
+        coords: new naver.maps.LatLng(lat, lng),
+        orders: [naver.maps.Service.OrderType.ADDR].join(','),
+      },
+      (status, res) => {
+        if (status !== naver.maps.Service.Status.OK) {
+          showToast('위치를 주소로 변환하지 못했어요');
+          setUseGeo(false);
+          return;
+        }
+        const region = res.v2.results[0]?.region;
+        const sidoName = region?.area1?.name;
+        const sigunguName = region?.area2?.name;
+        if (!sidoName || !bjdCodes) {
+          showToast('지역을 특정하지 못했어요');
+          setUseGeo(false);
+          return;
+        }
+        const sidoId = Object.keys(bjdCodes.sido).find((id) => bjdCodes.sido[id] === sidoName);
+        const sigunguId = sidoId && sigunguName
+          ? Object.keys(bjdCodes.sigungu).find((id) => id.startsWith(sidoId) && bjdCodes.sigungu[id] === sigunguName)
+          : null;
+
+        state.origin = sigunguName ? `${sidoName} ${sigunguName}` : sidoName;
+        state.originId = sigunguId || sidoId || null;
+        setGeoCache(state.origin, state.originId);
+        setUseGeo(true);
+        el.originLabel.textContent = state.origin;
+        showToast(`출발지를 ${state.origin}로 설정했어요`);
+      }
+    );
   }
 
   /* --- 교통 정보 (해당 여행지에서 이용 가능한 수단만) --- */
@@ -190,12 +323,37 @@
     el.btnSaved.classList.toggle('is-on', n > 0);
   }
 
+  /* --- 내 여행 기록 --- */
+  function renderMyRecord() {
+    if (!el.myRecord) return;
+    if (state.loggedIn) {
+      el.myRecord.innerHTML = `
+        <ul>
+          <li>
+            <span>
+            <span class="emoji">🏷️ </span>
+            <span class>여행 스탬프 </span>
+            <strong class="stat__value">${state.recordStamps}개</strong>
+            </span>
+          </li>
+          <li class>
+            <span class="emoji">📖 </span>
+            <span>여행일지 </span><strong class="stat__value">${state.recordJournals}개</strong>
+          </li>
+        </ul>
+        <button class="my-record__btn" type="button" id="btnRecordView">기록 보러가기</button>`;
+    } else {
+      el.myRecord.innerHTML = `
+        <p class="my-record__msg">여행 스탬프와 여행일지를 남겨보세요</p>
+        <button class="my-record__btn" type="button" id="btnRecordLogin">로그인하고 시작하기</button>`;
+    }
+  }
+
   /* --- 활성 표시 동기화 --- */
   function syncActive() {
-    $$('.marker', el.markers).forEach((m) =>
-      m.classList.toggle('is-active', m.dataset.dest === state.destId));
-    $$('.popular__btn', el.popularList).forEach((b) =>
-      b.classList.toggle('is-active', b.dataset.dest === state.destId));
+    // 핀(마커) 기능 보류 — 주석 처리
+    // $$('.marker', el.markers).forEach((m) =>
+    //   m.classList.toggle('is-active', m.dataset.dest === state.destId));
   }
 
   /* ============================================================
@@ -232,41 +390,6 @@
     renderToday();
   }
 
-  /* 랜덤 뽑기 */
-  async function runDraw() {
-    if (state.rolling) return;
-    const pins = $$('.marker', el.markers);
-    if (!pins.length) return;
-
-    state.rolling = true;
-    el.draw.classList.add('is-rolling');
-    el.btnDraw.disabled = true;
-
-    let index = Math.floor(Math.random() * pins.length);
-
-    if (!reduceMotion) {
-      let delay = 70;
-      while (delay < 250) {
-        pins.forEach((p) => p.classList.remove('is-rolling'));
-        index = (index + 1 + Math.floor(Math.random() * 2)) % pins.length;
-        pins[index].classList.add('is-rolling');
-        await sleep(delay);
-        delay *= 1.17;
-      }
-      pins.forEach((p) => p.classList.remove('is-rolling'));
-      pins[index].classList.add('is-won');
-      setTimeout(() => pins[index].classList.remove('is-won'), 750);
-    }
-
-    const picked = byId(pins[index].dataset.dest);
-    selectDestination(picked.id, { toast: false });
-    showToast(`🎉 오늘의 여행지는 「${picked.name}」!`);
-
-    el.draw.classList.remove('is-rolling');
-    el.btnDraw.disabled = false;
-    state.rolling = false;
-  }
-
   /* 토스트 */
   let toastTimer;
   function showToast(msg) {
@@ -300,7 +423,7 @@
     el.themeNext.disabled = state.themeIndex >= max;
   }
 
-  /* 마커 툴팁 */
+  /* 마커 툴팁 — 핀(마커) 기능 보류로 주석 처리
   function showTip(marker) {
     const dest = byId(marker.dataset.dest);
     const info = dest.fares[state.transport];
@@ -313,6 +436,7 @@
     el.mapTip.style.top  = `${y - marker.offsetHeight / 2 - 10}px`;
     el.mapTip.hidden = false;
   }
+  */
 
   /* ============================================================
      이벤트 바인딩
@@ -347,15 +471,33 @@
       });
     }
 
-    /* 인기 지역 · 인기 여행지 그리드 · 테마 카드 · 지도 마커 */
-    [el.popularList, el.spotGrid, el.themeTrack, el.markers].filter(Boolean).forEach((root) => {
+    /* 카테고리 필터 칩 (TourAPI cat1 연동 전까지는 활성 표시만 전환) */
+    if (el.categoryFilter) {
+      el.categoryFilter.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-cat]');
+        if (!chip) return;
+        $$('.chip--filter', el.categoryFilter).forEach((c) => c.classList.remove('is-active'));
+        chip.classList.add('is-active');
+      });
+    }
+
+    /* 인기 여행지 그리드 · 테마 카드 (지도 마커는 기능 보류로 제외) */
+    [el.spotGrid, el.themeTrack].filter(Boolean).forEach((root) => {
       root.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-dest]');
         if (btn) selectDestination(btn.dataset.dest);
       });
     });
 
-    /* 마커 호버 툴팁 */
+    /* 인기 지역 — 클릭하면 오늘의 여행지 대신 지도에서 해당 시/군/구를 선택 상태로 표시 */
+    if (el.popularList) {
+      el.popularList.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sigungu]');
+        if (btn && mapApi) mapApi.selectSigunguCode(btn.dataset.sigungu);
+      });
+    }
+
+    /* 마커 호버 툴팁 — 핀(마커) 기능 보류로 주석 처리
     el.markers.addEventListener('mouseover', (e) => {
       const m = e.target.closest('.marker');
       if (m) showTip(m);
@@ -368,9 +510,7 @@
       if (m) showTip(m);
     });
     el.markers.addEventListener('focusout', () => { el.mapTip.hidden = true; });
-
-    /* 랜덤 뽑기 */
-    el.btnDraw.addEventListener('click', runDraw);
+    */
 
     /* 찜하기 */
     el.btnLike.addEventListener('click', () => {
@@ -395,42 +535,102 @@
       showToast(`${t.emoji} ${state.origin} → ${d.name} · ${t.label} 경로를 준비할게요!`);
     });
 
+    /* 내 여행 기록 */
+    if (el.myRecord) {
+      el.myRecord.addEventListener('click', (e) => {
+        if (e.target.closest('#btnRecordLogin')) {
+          state.loggedIn = true;
+          localStorage.setItem('wtg:loggedIn', 'true');
+          renderMyRecord();
+          showToast('로그인했어요');
+        } else if (e.target.closest('#btnRecordView')) {
+          showToast('기록 페이지는 준비 중이에요');
+        }
+      });
+    }
+
     /* 찜 목록 버튼 */
     el.btnSaved.addEventListener('click', () => {
       const n = state.liked.size;
       showToast(n ? `🔖 찜한 여행지 ${n}곳` : '아직 찜한 여행지가 없어요');
     });
 
-    /* 출발지 드롭다운 */
+    /* 출발지 드롭업 (시/도 → 시/군/구) */
     el.originSelect.addEventListener('click', () => {
       const open = el.originSelect.getAttribute('aria-expanded') === 'true';
-      el.originSelect.setAttribute('aria-expanded', String(!open));
-      el.originList.hidden = open;
+      if (open) closeOriginDropup();
+      else openOriginDropup();
     });
 
     el.originList.addEventListener('click', (e) => {
-      const li = e.target.closest('[data-origin]');
-      if (!li) return;
-      state.origin = li.dataset.origin;
+      /* renderOriginDropup()이 innerHTML을 통째로 새로 그려서 클릭된 버튼이 DOM에서
+         떨어져 나감 — 이 클릭이 document의 "바깥 클릭 감지" 리스너까지 버블링되면
+         e.target.closest('.origin')이 null이 되어 방금 고른 시/도 목록이 그 자리에서
+         바로 닫혀버림. 여기서 막아서 바깥 클릭 리스너가 이 클릭을 보지 못하게 함 */
+      e.stopPropagation();
+
+      const backBtn = e.target.closest('[data-back]');
+      if (backBtn) {
+        originLevel = 'sido';
+        originSidoPick = null;
+        renderOriginDropup();
+        return;
+      }
+
+      const btn = e.target.closest('button[data-id]');
+      if (!btn || !bjdCodes) return;
+
+      if (originLevel === 'sido') {
+        originSidoPick = btn.dataset.id;
+        originLevel = 'sigungu';
+        renderOriginDropup();
+        return;
+      }
+
+      const sidoName = bjdCodes.sido[originSidoPick] || '';
+      const sigunguName = bjdCodes.sigungu[btn.dataset.id] || '';
+      state.origin = `${sidoName} ${sigunguName}`;
+      state.originId = btn.dataset.id;
       el.originLabel.textContent = state.origin;
-      renderOrigins();
-      el.originSelect.setAttribute('aria-expanded', 'false');
-      el.originList.hidden = true;
+      closeOriginDropup();
       showToast(`출발지를 ${state.origin}로 변경했어요`);
     });
 
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.origin')) {
-        el.originSelect.setAttribute('aria-expanded', 'false');
-        el.originList.hidden = true;
-      }
+      if (!e.target.closest('.origin')) closeOriginDropup();
     });
 
-    /* 내 위치 사용 */
+    /* 내 위치 사용 — geolocation → 네이버 리버스 지오코딩으로 시/군/구 특정
+       - localStorage 캐시(TTL 10분): 껐다 켜거나 새로고침해도 만료 전이면 API 재호출 안 함
+       - maximumAge: 브라우저가 최근 측위 결과 있으면 GPS 재측위 자체를 스킵
+       - 버튼 눌렀을 때만 호출 (자동 갱신 없음) */
     el.btnGeo.addEventListener('click', () => {
-      state.useGeo = !state.useGeo;
-      el.btnGeo.classList.toggle('is-off', !state.useGeo);
-      el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
+      if (state.useGeo) {
+        setUseGeo(false);
+        return;
+      }
+      const cached = getGeoCache();
+      if (cached) {
+        state.origin = cached.origin;
+        state.originId = cached.originId;
+        el.originLabel.textContent = state.origin;
+        setUseGeo(true);
+        showToast(`출발지를 ${state.origin}로 설정했어요`);
+        return;
+      }
+      if (!navigator.geolocation) {
+        showToast('이 브라우저는 위치 정보를 지원하지 않아요');
+        return;
+      }
+      el.geoLabel.textContent = '위치 확인 중…';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolveOriginFromCoords(pos.coords.latitude, pos.coords.longitude),
+        () => {
+          showToast('위치 권한이 거부됐어요');
+          el.geoLabel.textContent = state.useGeo ? '내 위치 사용 중' : '내 위치 사용 안 함';
+        },
+        { maximumAge: GEO_TTL_MS }
+      );
     });
 
     /* 캐러셀 */
@@ -447,8 +647,7 @@
     /* ESC — 열린 것 닫기 */
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      el.originSelect.setAttribute('aria-expanded', 'false');
-      el.originList.hidden = true;
+      closeOriginDropup();
       el.mapTip.hidden = true;
     });
   }
@@ -459,15 +658,17 @@
   function init() {
     renderPopular();
     renderSpotGrid();
-    renderMarkers();
     renderThemes();
-    renderOrigins();
     el.originLabel.textContent = state.origin;
+    restoreGeoState();
 
     selectDestination(state.destId, { toast: false });
     renderSavedCount();
+    renderMyRecord();
     moveThemes(0);
+    mapApi = initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
     bindEvents();
+    loadPopularRegions();
   }
 
   document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사이트 이름 | 마이페이지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/mypage.css">
+</head>
+<!-- data-page="mypage" : app.js / sidebar.js가 이 값으로 이 페이지에 맞는 코드만 실행합니다 -->
+<body data-page="mypage">
+
+<div id="page-app" class="page app-page">
+
+  <!-- 상단바는 topnav.js가 이 안에 그려줍니다 -->
+  <div id="app-topnav"></div>
+
+  <div class="app-body">
+    <!-- 사이드바는 sidebar.js가 이 안에 그려줍니다 -->
+    <div id="app-sidebar"></div>
+
+    <!-- ===== 이 페이지만의 콘텐츠 ===== -->
+    <main class="content">
+      <h2 class="view-title">내 정보 관리</h2>
+
+      <div class="profile-hero">
+        <span class="avatar avatar-lg" id="hero-avatar"></span>
+        <div>
+          <h3 id="hero-name">여행자 님,</h3>
+          <p class="muted">어서오세요.</p>
+          <button class="outline-btn small" id="change-photo-btn">프로필 사진 변경</button>
+          <input type="file" id="avatar-input" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="info-label">이름</span>
+          <input class="info-value-input" id="name-input" disabled>
+          <button class="chip-btn chip-blue" id="name-edit-btn">수정</button>
+        </div>
+        <div class="info-row">
+          <span class="info-label">이메일</span>
+          <input class="info-value-input" id="email-input" disabled>
+          <button class="chip-btn chip-blue" id="email-edit-btn">수정</button>
+        </div>
+        <div class="info-row">
+          <span class="info-label">비밀번호</span>
+          <input class="info-value-input" id="password-display" value="********" disabled>
+          <button class="chip-btn chip-orange" id="password-btn">인증하기</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- 스크립트 순서 중요: app.js(상태/공통함수) -> topnav.js -> sidebar.js
+     sidebar.js가 app.js의 state를 읽어서 프로필을 그리기 때문입니다. -->
+<script src="./js/app.js"></script>
+<script src="./js/topnav.js"></script>
+<script src="./js/sidebar.js"></script>
+</body>
+</html>
