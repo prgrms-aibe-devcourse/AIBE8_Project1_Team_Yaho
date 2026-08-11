@@ -8,9 +8,16 @@
    - 주간 합계도 localStorage에 캐시하고 주(일요일)가 바뀔 때만 재호출 —
      사이드바 상위 4개든 전체보기 페이지 랭킹이든 이 캐시 하나로 다 계산한다.
    ============================================================ */
-import { REGIONS } from './data.js';
-
 const baseUrl = "https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList";
+
+/* 지도 SVG(images/map-korea.svg)에 그려진 시/도 id 17개 — REGIONS를 대체 (map.js와 동일) */
+const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','45','46','47','48','50','51'];
+
+let bjdCodes = null;
+const bjdCodesReady = fetch('data/bjd-codes.json')
+  .then((res) => res.json())
+  .then((data) => { bjdCodes = data; })
+  .catch((err) => console.error('법정동 코드 로드 실패:', err));
 
 /* v2: totalCount>0만으로 최신일자 판단하던 v1 캐시에 API가 데이터 없는 날에도
    가장 가까운 과거 데이터를 돌려준 탓에 오늘 날짜가 잘못 저장되는 문제가 있어
@@ -207,9 +214,9 @@ function sumByGroup(totals, { touDivCds, sidoCode, groupBy }) {
 
 const roundToTenThousand = (n) => Math.round(n / 10000) * 10000;
 
-/* 이 API의 시/도 코드는 REGIONS(법정동코드 기준)와 완전히 같지 않음 — 실측해보니
+/* 이 API의 시/도 코드는 법정동코드 기준 시/도 id와 완전히 같지 않음 — 실측해보니
    전북은 개편 전 코드(45) 대신 전북특별자치도 코드(52)로 오고, 광주·전남은 "12"
-   하나로 묶여서 온다(둘을 구분해서 주지 않음). REGIONS의 시/도 id로 필터링/표시하려면
+   하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로 필터링/표시하려면
    이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
 const SIDO_API_ALIASES = { 29: '12', 46: '12', 45: '52' };
 const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도' };
@@ -217,11 +224,12 @@ const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북
 /* scope: 'all' | 'sido' | 'domestic' | 'foreign'
    - all/domestic/foreign: 시/군/구 랭킹 (touDivCd 필터만 다름 — 1:현지인 2:외지인 3:외국인)
    - sido: sidoCode 없으면 광역자치단체 랭킹, 있으면 그 시/도 안 시/군/구 랭킹
-   sidoCode는 REGIONS의 id를 그대로 받는다(위 별칭 처리는 이 함수 안에서 함).
+   sidoCode는 지도가 쓰는 시/도 id를 그대로 받는다(위 별칭 처리는 이 함수 안에서 함).
    반환: [{ code, name, visitorCount(만 단위로 반올림된 값) }] (내림차순, 페이지네이션은 호출부 몫) */
 export async function getRegionRanking({ scope = 'all', sidoCode = null } = {}) {
   const totals = await getWeeklyTotals();
   if (!totals.length) return [];
+  await bjdCodesReady;
 
   const apiSidoCode = sidoCode ? (SIDO_API_ALIASES[sidoCode] || sidoCode) : null;
   const touDivCds = scope === 'domestic' ? ['1', '2'] : scope === 'foreign' ? ['3'] : ['1', '2', '3'];
@@ -229,7 +237,7 @@ export async function getRegionRanking({ scope = 'all', sidoCode = null } = {}) 
   const rows = sumByGroup(totals, { touDivCds, sidoCode: apiSidoCode, groupBy });
 
   const nameOf = (code) => {
-    if (groupBy === 'sido') return (REGIONS.find((r) => r.id === code) || {}).label || SIDO_FALLBACK_NAMES[code] || code;
+    if (groupBy === 'sido') return (bjdCodes && bjdCodes.sido[code]) || SIDO_FALLBACK_NAMES[code] || code;
     return (totals.find((t) => t.code === code) || {}).name || code;
   };
 
@@ -263,14 +271,14 @@ function initPopAreaPage() {
   const state = { scope: 'all', sidoCode: null, page: 1, ranking: [] };
 
   function renderSidoButtons() {
-    const li = (r) => `
+    const li = (id) => `
       <li>
-        <button type="button" class="chip chip--filter${state.sidoCode === r.id ? ' is-active' : ''}" data-sido="${r.id}">
-          ${r.label}
+        <button type="button" class="chip chip--filter${state.sidoCode === id ? ' is-active' : ''}" data-sido="${id}">
+          ${(bjdCodes && bjdCodes.sido[id]) || id}
         </button>
       </li>`;
-    el.sidoRow1.innerHTML = REGIONS.slice(0, 10).map(li).join('');
-    el.sidoRow2.innerHTML = REGIONS.slice(10).map(li).join('');
+    el.sidoRow1.innerHTML = MAP_SIDO_IDS.slice(0, 10).map(li).join('');
+    el.sidoRow2.innerHTML = MAP_SIDO_IDS.slice(10).map(li).join('');
   }
 
   function renderPagination(totalPages) {

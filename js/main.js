@@ -1,7 +1,6 @@
 /* ============================================================
    main.js — 화면 렌더링 & 인터랙션
    ============================================================ */
-import { TRANSPORTS, DESTINATIONS, POPULAR, THEMES } from './data.js';
 import { initMap } from './map.js';
 import { getPopularRegions } from './popArea.js';
 
@@ -11,8 +10,6 @@ import { getPopularRegions } from './popArea.js';
   /* ---------- 유틸 ---------- */
   const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const won = (n) => '약 ' + n.toLocaleString('ko-KR') + '원';
-  const byId = (id) => DESTINATIONS.find((d) => d.id === id);
 
   const icon = (name, cls = 'ico') =>
     `<svg class="${cls}" aria-hidden="true"><use href="#${name}"></use></svg>`;
@@ -30,11 +27,8 @@ import { getPopularRegions } from './popArea.js';
 
   /* ---------- 상태 ---------- */
   const state = {
-    destId: 'gangneung',
-    transport: 'car',
     origin: null,
     originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
-    themeIndex: 0,
     spotCategory: '전체',
     spotPage: 1,
     popularRegions: null, /* getPopularRegions() 로딩 전까지는 null → 샘플 데이터로 자리 표시 */
@@ -79,7 +73,6 @@ import { getPopularRegions } from './popArea.js';
 
   /* ---------- DOM ---------- */
   const el = {
-    transportList: $('#transportList'),
     popularList:   $('#popularList'),
     spotGrid:      $('#spotGrid'),
     categoryFilter: $('#categoryFilter'),
@@ -88,8 +81,6 @@ import { getPopularRegions } from './popArea.js';
     spotPagerLabel: $('#spotPagerLabel'),
     markers:       $('#markers'),
     mapTip:        $('#mapTip'),
-    fareList:      $('#fareList'),
-    themeTrack:    $('#themeTrack'),
 
     draw:      $('.draw'),
     btnDraw:   $('#btnDraw'),
@@ -101,8 +92,6 @@ import { getPopularRegions } from './popArea.js';
     originLabel:  $('#originLabel'),
     originList:   $('#originList'),
 
-    themePrev: $('#themePrev'),
-    themeNext: $('#themeNext'),
     toast:     $('#toast'),
   };
 
@@ -110,26 +99,10 @@ import { getPopularRegions } from './popArea.js';
      렌더링
      ============================================================ */
 
-  /* --- 교통수단 목록 --- */
-  function renderTransports() {
-    if (!el.transportList) return;
-    const dest = byId(state.destId);
-    el.transportList.innerHTML = TRANSPORTS.map((t) => {
-      const info = dest.fares[t.key];
-      return `
-        <li>
-          <button class="transport__btn${state.transport === t.key ? ' is-active' : ''}${info ? '' : ' is-unavailable'}"
-                  type="button" data-transport="${t.key}" ${info ? '' : 'disabled'}>
-            ${icon(t.icon)}<span>${t.label}</span>
-            ${info ? '' : '<span class="transport__na">운행 없음</span>'}
-          </button>
-        </li>`;
-    }).join('');
-  }
-
-  /* --- 인기 지역 (TourAPI 주간 방문자 수 기준 상위 4곳, 사진은 샘플 데이터 그대로 유지) --- */
+  /* --- 인기 지역 (TourAPI 주간 방문자 수 기준 상위 4곳) --- */
   function renderPopular() {
-    const list = state.popularRegions || POPULAR.map((p) => ({ title: p.title, desc: '불러오는 중…', sigunguCode: null }));
+    const list = state.popularRegions
+      || Array.from({ length: 4 }, () => ({ title: '불러오는 중…', desc: '', sigunguCode: null }));
     el.popularList.innerHTML = list.map((p, i) => `
       <li>
         <button class="popular__btn" type="button" ${p.sigunguCode ? `data-sigungu="${p.sigunguCode}"` : ''}>
@@ -228,21 +201,6 @@ import { getPopularRegions } from './popArea.js';
     }
   }
 
-  /* --- 테마별 추천 --- */
-  function renderThemes() {
-    if (!el.themeTrack) return;
-    el.themeTrack.innerHTML = THEMES.map((t) => `
-      <li>
-        <button class="theme-card" type="button" data-dest="${t.destId}">
-          <span class="theme-card__tag">
-            <span class="theme-card__dot" style="--tone:${t.tone}">${t.glyph}</span>#${t.tag}
-          </span>
-          <span class="theme-card__name">${t.name}</span>
-          <img class="theme-card__img" src="${t.img}" alt="" loading="lazy" />
-        </button>
-      </li>`).join('');
-  }
-
   /* --- 출발지 드롭업 (시/도 목록 또는 선택된 시/도의 시/군/구 목록) --- */
   function renderOriginDropup() {
     if (!el.originList || !bjdCodes) return;
@@ -319,26 +277,6 @@ import { getPopularRegions } from './popArea.js';
     );
   }
 
-  /* --- 교통 정보 (해당 여행지에서 이용 가능한 수단만) --- */
-  function renderFares() {
-    if (!el.fareList) return;
-    const dest = byId(state.destId);
-    const rows = TRANSPORTS.filter((t) => dest.fares[t.key]);
-
-    el.fareList.innerHTML = rows.map((t) => {
-      const info = dest.fares[t.key];
-      return `
-        <li class="fare${state.transport === t.key ? ' is-active' : ''}" data-transport="${t.key}">
-          <span class="fare__icon" aria-hidden="true">${t.emoji}</span>
-          <span class="fare__body">
-            <span class="fare__label">${t.fareLabel}</span>
-            <span class="fare__time">약 ${info.time}</span>
-          </span>
-          <span class="fare__cost">${won(info.cost)}</span>
-        </li>`;
-    }).join('');
-  }
-
   /* --- 내 여행 기록 --- */
   function isLoggedIn() {
     try { return localStorage.getItem('isLoggedIn') === 'true'; }
@@ -383,45 +321,6 @@ import { getPopularRegions } from './popArea.js';
     }
   }
 
-  /* --- 활성 표시 동기화 --- */
-  function syncActive() {
-    // 핀(마커) 기능 보류 — 주석 처리
-    // $$('.marker', el.markers).forEach((m) =>
-    //   m.classList.toggle('is-active', m.dataset.dest === state.destId));
-  }
-
-  /* ============================================================
-     동작
-     ============================================================ */
-
-  /* 여행지 선택 */
-  function selectDestination(id, opts = {}) {
-    const dest = byId(id);
-    if (!dest) return;
-    state.destId = id;
-
-    /* 현재 교통수단을 못 쓰면 이용 가능한 첫 수단으로 자동 전환 */
-    if (!dest.fares[state.transport]) {
-      const first = TRANSPORTS.find((t) => dest.fares[t.key]);
-      if (first) state.transport = first.key;
-    }
-
-    renderTransports();
-    renderFares();
-    syncActive();
-
-    if (opts.toast !== false) showToast(`📍 ${dest.region} ${dest.name}`);
-  }
-
-  /* 교통수단 선택 */
-  function selectTransport(key) {
-    const dest = byId(state.destId);
-    if (!dest.fares[key]) return;
-    state.transport = key;
-    renderTransports();
-    renderFares();
-  }
-
   /* 토스트 */
   let toastTimer;
   function showToast(msg) {
@@ -431,65 +330,10 @@ import { getPopularRegions } from './popArea.js';
     toastTimer = setTimeout(() => el.toast.classList.remove('is-on'), 2200);
   }
 
-  /* 캐러셀 */
-  function themeStep() {
-    const card = $('.theme-card', el.themeTrack);
-    if (!card) return 145;
-    const gap = parseFloat(getComputedStyle(el.themeTrack).columnGap) || 18;
-    return card.getBoundingClientRect().width + gap;
-  }
-
-  function themeMaxIndex() {
-    const viewport = $('.themes__viewport').clientWidth;
-    const step = themeStep();
-    const visible = Math.max(1, Math.floor((viewport + 18) / step));
-    return Math.max(0, THEMES.length - visible);
-  }
-
-  function moveThemes(delta) {
-    if (!el.themeTrack || !el.themePrev || !el.themeNext) return;
-    const max = themeMaxIndex();
-    state.themeIndex = Math.min(max, Math.max(0, state.themeIndex + delta));
-    el.themeTrack.style.transform = `translateX(${-state.themeIndex * themeStep()}px)`;
-    el.themePrev.disabled = state.themeIndex === 0;
-    el.themeNext.disabled = state.themeIndex >= max;
-  }
-
-  /* 마커 툴팁 — 핀(마커) 기능 보류로 주석 처리
-  function showTip(marker) {
-    const dest = byId(marker.dataset.dest);
-    const info = dest.fares[state.transport];
-    const rect = el.markers.getBoundingClientRect();
-    const x = parseFloat(marker.style.left) / 100 * rect.width;
-    const y = parseFloat(marker.style.top) / 100 * rect.height;
-
-    el.mapTip.innerHTML = `${dest.name}<small>${dest.region} · ${info ? info.time : '이용 불가'}</small>`;
-    el.mapTip.style.left = `${x}px`;
-    el.mapTip.style.top  = `${y - marker.offsetHeight / 2 - 10}px`;
-    el.mapTip.hidden = false;
-  }
-  */
-
   /* ============================================================
      이벤트 바인딩
      ============================================================ */
   function bindEvents() {
-    /* 교통수단 */
-    if (el.transportList) {
-      el.transportList.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-transport]');
-        if (btn) selectTransport(btn.dataset.transport);
-      });
-    }
-
-    /* 교통 정보 행 클릭 → 해당 수단 선택 */
-    if (el.fareList) {
-      el.fareList.addEventListener('click', (e) => {
-        const row = e.target.closest('[data-transport]');
-        if (row) selectTransport(row.dataset.transport);
-      });
-    }
-
     /* 카테고리 필터 칩 → TourAPI 분류체계로 spotGrid 재조회 (1페이지부터) */
     if (el.categoryFilter) {
       el.categoryFilter.addEventListener('click', (e) => {
@@ -507,14 +351,6 @@ import { getPopularRegions } from './popArea.js';
     }
     if (el.spotPagerNext) {
       el.spotPagerNext.addEventListener('click', () => loadSpotGrid(state.spotCategory, state.spotPage + 1));
-    }
-
-    /* 테마 카드 (지도 마커는 기능 보류로 제외) */
-    if (el.themeTrack) {
-      el.themeTrack.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-dest]');
-        if (btn) selectDestination(btn.dataset.dest);
-      });
     }
 
     /* 인기 지역 — 클릭하면 오늘의 여행지 대신 지도에서 해당 시/군/구를 선택 상태로 표시 */
@@ -627,17 +463,6 @@ import { getPopularRegions } from './popArea.js';
       );
     });
 
-    /* 캐러셀 */
-    if (el.themePrev) el.themePrev.addEventListener('click', () => moveThemes(-1));
-    if (el.themeNext) el.themeNext.addEventListener('click', () => moveThemes(1));
-
-    /* 리사이즈 대응 */
-    let resizeTimer;
-    window.addEventListener('resize', () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => moveThemes(0), 120);
-    });
-
     /* ESC — 열린 것 닫기 */
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
@@ -652,12 +477,9 @@ import { getPopularRegions } from './popArea.js';
   function init() {
     renderPopular();
     loadSpotGrid('전체', 1);
-    renderThemes();
 
-    selectDestination(state.destId, { toast: false });
     renderMyRecord();
-    moveThemes(0);
-    mapApi = initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
+    mapApi = initMap({ showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
     bindEvents();
     loadPopularRegions();
   }

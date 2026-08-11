@@ -347,7 +347,6 @@ body {
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
-.themes       { grid-column: 2 / -1; grid-row: 2; }
 
 /* ------------------------------------------------------------
    5. 좌측 패널
@@ -463,42 +462,6 @@ body {
 .origin__list-back { color: var(--ink-500) !important; font-weight: 600; }
 
 .chip--geo { margin-top: 9px; }
-
-/* --- 교통수단 --- */
-.transport { display: flex; flex-direction: column; gap: 8px; }
-
-.transport__btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  height: 36px;
-  padding: 0 13px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  background: #fff;
-  color: var(--ink-800);
-  font-size: 13.5px;
-  font-weight: 600;
-  text-align: left;
-  transition: border-color .18s var(--ease), background-color .18s var(--ease),
-              color .18s var(--ease), box-shadow .18s var(--ease);
-}
-.transport__btn .ico { color: var(--ink-500); transition: color .18s var(--ease); }
-.transport__btn:hover { border-color: var(--blue-200); background: var(--blue-50); }
-.transport__btn:hover .ico { color: var(--blue-500); }
-
-.transport__btn.is-active {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
-  color: #fff;
-  box-shadow: var(--sh-blue);
-}
-.transport__btn.is-active .ico { color: #fff; }
-
-.transport__btn.is-unavailable { opacity: .45; }
-.transport__na { margin-left: auto; font-size: 11.5px; font-weight: 500; color: var(--ink-500); }
-.transport__btn.is-active .transport__na { color: rgba(255, 255, 255, .8); }
 
 /* --- 인기 지역 --- */
 .popular { display: flex; flex-direction: column; }
@@ -735,33 +698,6 @@ body {
 .stat__label { color: var(--ink-500); font-size: 10.5px; }
 .stat__value { font-size: 13px; font-weight: 700; letter-spacing: -.02em;}
 
-/* --- 교통 정보 --- */
-.fares { display: flex; flex-direction: column; gap: 9px; }
-
-.fare {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: var(--sh-1);
-  transition: border-color .18s var(--ease), box-shadow .18s var(--ease), background-color .18s var(--ease);
-}
-.fare.is-active {
-  border-color: var(--blue-200);
-  background: var(--blue-50);
-  box-shadow: 0 2px 10px rgba(37, 99, 235, .1);
-}
-.fare.is-off { opacity: .5; }
-
-.fare__icon { font-size: 24px; line-height: 1; flex: none; }
-.fare__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.fare__label { font-size: 13.5px; font-weight: 700; }
-.fare__time  { color: var(--ink-500); font-size: 11.5px; }
-.fare__cost  { font-size: 13.5px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
-
 /* --- 내 여행 기록 --- */
 .my-record {
   padding: 14px;
@@ -794,105 +730,6 @@ body {
   transition: background-color .16s var(--ease), border-color .16s var(--ease);
 }
 .my-record__btn:hover { background: var(--blue-50); border-color: var(--blue-200); }
-
-/* ------------------------------------------------------------
-   8. 테마별 추천 캐러셀
-   ------------------------------------------------------------ */
-.themes {
-  position: relative;
-  padding: 16px 16px 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--card);
-  box-shadow: var(--sh-2);
-}
-.themes__viewport { overflow: hidden; }
-
-.themes__track {
-  display: flex;
-  gap: 18px;
-  transition: transform .38s var(--ease);
-}
-
-/* 카드는 남는 폭만큼 늘어나되 127px(시안 기준) 아래로는 줄지 않고 넘치면 스크롤 */
-.themes__track > li { flex: 1 0 127px; display: flex; }
-
-.theme-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 10px 10px 10px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  text-align: left;
-  box-shadow: var(--sh-1);
-  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease);
-}
-.theme-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--blue-200);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, .1);
-}
-
-.theme-card__tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ink-800);
-}
-.theme-card__dot {
-  display: grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 5px;
-  background: var(--tone, var(--blue-500));
-  color: #fff;
-  font-size: 9.5px;
-  line-height: 1;
-}
-.theme-card__name {
-  margin: 5px 0 9px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-800);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.theme-card__img {
-  width: 100%;
-  aspect-ratio: 127 / 72;
-  border-radius: 8px;
-  object-fit: cover;
-  background: linear-gradient(160deg, #dbeafe, #bfdbfe);
-}
-
-/* --- 좌우 화살표 --- */
-.nav-arrow {
-  position: absolute;
-  top: 60%;
-  z-index: 6;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-pill);
-  background: #fff;
-  color: var(--ink-600);
-  box-shadow: 0 3px 12px rgba(15, 23, 42, .12);
-  transform: translateY(-50%);
-  transition: background-color .18s var(--ease), color .18s var(--ease),
-              border-color .18s var(--ease), opacity .18s var(--ease);
-}
-.nav-arrow:hover { background: var(--blue-600); border-color: var(--blue-600); color: #fff; }
-.nav-arrow:disabled { opacity: .32; pointer-events: none; }
-.nav-arrow--prev { left: -17px; }
-.nav-arrow--next { right: -17px; }
 
 /* ------------------------------------------------------------
    9. 토스트
@@ -941,9 +778,7 @@ body {
     grid-template-columns: var(--col-left) minmax(0, 1fr);
   }
   .panel--right { grid-column: 2; grid-row: 2; }
-  .themes       { grid-column: 1 / -1; grid-row: 3; }
   .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .fares { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 }
 
 /* 태블릿 세로 */
@@ -956,7 +791,6 @@ body {
   .panel--left  { grid-column: 1; grid-row: 2; }
   .map          { grid-column: 1; grid-row: 1; }
   .panel--right { grid-column: 1; grid-row: 3; }
-  .themes       { grid-column: 1; grid-row: 4; }
   .map { max-width: 620px; margin: 0 auto; }
 }
 
@@ -972,9 +806,5 @@ body {
   .logo__title { font-size: 17px; }
 
   .layout { padding: 14px var(--gutter) 32px; }
-  .themes { padding: 14px 12px 16px; }
-  .nav-arrow--prev { left: 4px; }
-  .nav-arrow--next { right: 4px; }
   .today__name { font-size: 24px; }
-  .fares { grid-template-columns: 1fr; }
 }

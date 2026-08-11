@@ -1,19 +1,24 @@
 /* ============================================================
    map.js — 지도(시/도 확대 · 핀 · 뽑기) 전용 모듈
    ------------------------------------------------------------
-   main.js에서 initMap()으로 초기화. 여행지 카드 갱신/토스트는
-   직접 하지 않고 main.js가 넘겨준 콜백(selectDestination, showToast)을
-   통해서만 상호작용한다.
+   main.js에서 initMap()으로 초기화. 토스트 표시는 직접 하지 않고
+   main.js가 넘겨준 콜백(showToast)을 통해서만 상호작용한다.
    ============================================================ */
-import { DESTINATIONS, REGIONS } from './data.js';
-
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const byId = (id) => DESTINATIONS.find((d) => d.id === id);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
+/* 지도 SVG(images/map-korea.svg)에 그려진 시/도 id 17개 — REGIONS를 대체 */
+const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','45','46','47','48','50','51'];
+/* 랜덤뽑기 결과 토스트에 쓰는 대표 여행지(있는 시/도만) — DESTINATIONS를 대체 */
+const FEATURED_DEST = {
+  11: { name: '서울' }, 26: { name: '부산' }, 36: { name: '세종' },
+  41: { name: '가평' }, 45: { name: '전주' }, 46: { name: '여수' },
+  47: { name: '경주' }, 50: { name: '제주' }, 51: { name: '강릉' },
+};
+
+export function initMap({ showToast, drawEl, drawBtnEl }) {
   const el = {
     map:           $('.map'),
     mapBg:         $('#mapBg'),
@@ -94,7 +99,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     if (!el.dropup) return;
     const items = state.zoomedRegion
       ? (state.sigunguIds || []).map((id) => ({ id, name: (bjdCodes && bjdCodes.sigungu[id]) || id, key: 'sigungu' }))
-      : REGIONS.map((r) => ({ id: r.id, name: r.label, key: 'sido' }));
+      : MAP_SIDO_IDS.map((id) => ({ id, name: (bjdCodes && bjdCodes.sido[id]) || id, key: 'sido' }));
     items.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     el.dropup.innerHTML = items
       .map((it) => `<li role="option"><button type="button" data-key="${it.key}" data-id="${it.id}">${it.name}</button></li>`)
@@ -215,8 +220,7 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
 
   /* --- 시/도 클릭 → 전체 지도를 확대하는 대신, 그 시/도에 속한 시군구만 모아서 표시 --- */
   async function zoomToRegion(regionId) {
-    const info = REGIONS.find((r) => r.id === regionId);
-    if (!info || !el.map || !el.mapBg) return;
+    if (!MAP_SIDO_IDS.includes(regionId) || !el.map || !el.mapBg) return;
 
     /* 시군구를 시/도 배경색과 맞추기 위해, 개요 지도가 없어지기 전에 그 색을 미리 읽어둠 */
     const sidoEl = document.getElementById(regionId);
@@ -258,19 +262,9 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     const labelPad = Math.max(bbox.width, bbox.height) * 0.22;
     svgEl.setAttribute('viewBox', `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad + labelPad} ${bbox.height + pad + labelPad}`);
 
-    const dest = info.destId ? byId(info.destId) : null;
-    // 핀(마커) 표시 보류 — 랜덤 뽑기에도 미적용, 폐기 보류 상태라 전부 주석 처리
-    // el.markers.style.transform = '';
-    // el.markers.innerHTML = `
-    //   <button class="marker" type="button" ${dest ? `data-dest="${dest.id}"` : ''}
-    //           style="left:50%; top:50%" aria-label="${info.label}">
-    //     ${dest && (dest.marker || dest.photo) ? `<img class="marker__img" src="${dest.marker || dest.photo}" alt="" />` : ''}
-    //   </button>`;
-
     el.map.classList.add('is-zoomed');
     if (el.mapBack) el.mapBack.hidden = false;
     state.zoomedRegion = regionId;
-    if (dest) selectDestination(dest.id, { toast: false });
   }
 
   /* --- 전체 지도로 복귀 --- */
@@ -317,8 +311,8 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     }
 
     if (ask) {
-      const info = REGIONS.find((r) => r.id === state.zoomedRegion);
-      el.sigunguDrawEyebrow.textContent = `✦ ${info ? info.label : '지역'} 도착!`;
+      const label = (bjdCodes && bjdCodes.sido[state.zoomedRegion]) || '지역';
+      el.sigunguDrawEyebrow.textContent = `✦ ${label} 도착!`;
       el.sigunguDrawQuestion.hidden = false;
       el.sigunguDrawText.hidden = true;
       el.sigunguDrawConfirm.hidden = true;
@@ -414,11 +408,10 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     }
 
     const landedId = regionEls[finalIndex].id;
-    const info = REGIONS.find((r) => r.id === landedId);
-    const dest = info && info.destId ? byId(info.destId) : null;
+    const dest = FEATURED_DEST[landedId];
 
     await zoomToRegion(landedId);
-    showToast(`🎉 오늘의 여행지는 「${dest ? dest.name : info.label}」!`);
+    showToast(`🎉 오늘의 여행지는 「${dest ? dest.name : (bjdCodes && bjdCodes.sido[landedId]) || landedId}」!`);
     await runSigunguDraw({ ask: true });
 
     drawEl.classList.remove('is-rolling');
