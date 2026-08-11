@@ -16,7 +16,6 @@
   cursor: pointer;
   border-radius: 10px;
   overflow: hidden;
-  aspect-ratio: 1 / 1;
   background: #e7edf3;
   box-shadow: 0 6px 16px -8px rgba(20,50,90,0.25);
   transition: transform .12s;
@@ -24,9 +23,20 @@
 .bookmark-card:hover{ transform: translateY(-3px); }
 .bookmark-card img{
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   display: block;
+}
+.bookmark-card__name{
+  display: block;
+  padding: 8px 10px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e2430;
+  background: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 900px){

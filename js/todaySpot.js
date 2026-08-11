@@ -6,8 +6,9 @@
  * 와는 완전히 독립된 별도 기능이다.
  *
  * - 랜덤 5개는 하루(한국시간 자정 기준) 한 번만 새로 뽑아 localStorage에 캐시.
- * - 찜 아이콘은 헤더 북마크 아이콘(#i-bookmark)과 통일했고, 헤더의 찜 카운트
- *   (localStorage 'wtg:liked', main.js가 관리)를 그대로 공유한다.
+ * - 찜 아이콘은 헤더 북마크 아이콘(#i-bookmark)과 통일했고, 채워짐 여부는
+ *   detail.js/bookmark.js와 공유하는 북마크 목록(localStorage 'travelBookmarks_v1')에
+ *   이 여행지 id가 들어있는지로 판단한다 (실제 북마크 여부와 항상 일치시키기 위함).
  * - 길찾기는 여행지 주소를 네이버 지도 검색 딥링크로 새 탭에 연다.
  *   (예상 소요시간/거리는 넣지 않음 — Direction5는 서버 전용 API라 정적
  *    사이트에서 CORS로 막혀 못 붙임, 길찾기 버튼으로 대신함)
@@ -16,7 +17,6 @@
   'use strict';
 
   const CACHE_KEY = 'wtg:todaySpot:v1';
-  const LIKED_KEY = 'wtg:liked'; // 이 위젯 안에서 하트 아이콘 on/off 표시용
   const BOOKMARK_KEY = 'travelBookmarks_v1'; // detail.js/bookmark.js와 공유하는 북마크 목록
   const FALLBACK_IMG = 'images/th-hallasan.png';
   const POOL_PAGES = 30; // 여행지 목록 중 임의의 페이지를 뽑아 그 날의 5개를 정함
@@ -37,7 +37,7 @@
   };
   if (!el.img) return; // 이 위젯이 없는 페이지에서는 조용히 종료
 
-  const state = { items: [], index: 0, liked: new Set(readJSON(LIKED_KEY, [])) };
+  const state = { items: [], index: 0 };
 
   function readJSON(key, fallback) {
     try {
@@ -81,6 +81,10 @@
     return [item.addr1, item.addr2].filter(Boolean).join(' ').trim() || '주소 정보 없음';
   }
 
+  function isBookmarked(id) {
+    return readJSON(BOOKMARK_KEY, []).some((b) => String(b.id) === String(id));
+  }
+
   function renderPager() {
     if (!el.pagerLabel) return;
     const total = state.items.length;
@@ -100,7 +104,7 @@
     el.descTitle.textContent = item.title;
     el.descAddr.textContent = addressOf(item);
 
-    const liked = state.liked.has(item.contentid);
+    const liked = isBookmarked(item.contentid);
     el.like.setAttribute('aria-pressed', String(liked));
     el.like.setAttribute('aria-label', liked ? '찜 해제' : '찜하기');
 
@@ -116,24 +120,21 @@
     renderSpot();
   }
 
-  function toggleBookmark(id, image, link) {
+  function toggleBookmark(id, image, link, name) {
     const list = readJSON(BOOKMARK_KEY, []);
     const idx = list.findIndex((b) => String(b.id) === String(id));
     if (idx > -1) list.splice(idx, 1);
-    else list.unshift({ id, image, link });
+    else list.unshift({ id, image, link, name });
     writeJSON(BOOKMARK_KEY, list);
   }
 
   function toggleLike() {
     const item = state.items[state.index];
     if (!item) return;
-    const nowLiked = !state.liked.has(item.contentid);
-    nowLiked ? state.liked.add(item.contentid) : state.liked.delete(item.contentid);
-    writeJSON(LIKED_KEY, [...state.liked]);
 
     const image = item.firstimage || item.firstimage2 || FALLBACK_IMG;
     const link = `detail.html?id=${item.contentid}&type=${item.contenttypeid}`;
-    toggleBookmark(item.contentid, image, link);
+    toggleBookmark(item.contentid, image, link, item.title);
 
     el.like.classList.remove('is-beat');
     void el.like.offsetWidth; // 애니메이션 리셋

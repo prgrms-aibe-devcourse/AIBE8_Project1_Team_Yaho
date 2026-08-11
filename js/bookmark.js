@@ -89,7 +89,8 @@ if(typeof page !== 'undefined' && page === 'bookmark'){
       card.href = item.link || '#';
       card.style.position = 'relative';
       card.innerHTML = `
-        <img src="${item.image}" alt="북마크한 장소 사진" loading="lazy">
+        <img src="${item.image}" alt="${item.name || '북마크한 장소'} 사진" loading="lazy">
+        <span class="bookmark-card__name">${item.name || ''}</span>
         <button type="button" class="bookmark-remove-btn" title="북마크 삭제"
           style="position:absolute; top:6px; right:6px; width:24px; height:24px;
                  border-radius:50%; background:rgba(0,0,0,0.55); color:#fff;

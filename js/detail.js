@@ -39,7 +39,7 @@
   }
 
   // 이미 저장돼 있으면 제거, 아니면 추가 (토글). 반환값 = 토글 후 저장 여부
-  function toggleBookmark(id, image, link) {
+  function toggleBookmark(id, image, link, name) {
     var list = getBookmarks();
     var idx = -1;
     for (var i = 0; i < list.length; i++) {
@@ -50,7 +50,7 @@
       setBookmarks(list);
       return false;
     }
-    list.unshift({ id: id, image: image, link: link });
+    list.unshift({ id: id, image: image, link: link, name: name });
     setBookmarks(list);
     return true;
   }
@@ -419,7 +419,7 @@
       refreshSaveBtnLabel();
 
       saveBtn.addEventListener('click', function () {
-        var nowSaved = toggleBookmark(contentId, heroImage, buildSelfLink());
+        var nowSaved = toggleBookmark(contentId, heroImage, buildSelfLink(), common.title);
         refreshSaveBtnLabel();
         showToast(nowSaved ? '북마크에 저장했습니다' : '북마크에서 제거했습니다');
       });
