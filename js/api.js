@@ -39,15 +39,21 @@ const TourAPI = ( () => {
 
 
     // URL 빌더
+    // endpoint : API의 세부경로
+    // params : url 뒤에 추가로 붙일 파라메타들 { numofRows : 10, pageNo : 1 등등 }
     function buildUrl(endpoint, params) {
+      // API 사용 문서에 나와 있는 url 대로 조합
         let url = `${BASE}/${endpoint}` +
         `?serviceKey=${CONFIG.SERVICE_KEY}` +
         `&MobileOS=ETC&MobileApp=test&_type=json`;
 
+        //params 객체를 [key, value] 쌍으로 순회
         for (const [key, value] of Object.entries(params)) {
+        // 객체가 비어 있다면 url에 추가로 붙이지 않고 넘어감
         if (value === undefined || value === null || value === '') continue;
+        // value가 string이라면 URL 인코딩 처리( 한글, 특수문자가 깨지지 않도록 )
         const encoded = typeof value === 'string' ? encodeURIComponent(value) : value;
-        url += `&${key}=${encoded}`;
+        url += `&${key}=${encoded}`; // 인코딩된 문자열을 url에 추가
         }
         return url;
     }
@@ -56,26 +62,30 @@ const TourAPI = ( () => {
     async function callApi(endpoint, params) {
         const url = buildUrl(endpoint, params);
 
+        // sessionStorage에서 url을 키로 캐시된 데이터가 존재하는지 체크, 존재하면 반환 ( 재요청 방지 )
         const cached = cacheGet(url);
         if (cached) return cached;
 
-        // await 를 붙여줌으로써 해당 줄에서 코드가 멈춰서 서버에 요청이 돌아올때까지 기다린다.
+        // 캐시된 url이 없다면 url로 API 요청
+        // await 를 붙여줌으로써 해당 줄에서 callAppi 함수의 실행을 멈추고 서버에 요청이 돌아올때까지 기다린다.
+        // 비동기 작업이라 다른 이후의 코드들은 실행이 가능함
         const res = await fetch(url); // url로 네트워크 요청을 보내는 함수
         if (!res.ok) { // 요청에 실패했다면
         throw new Error(`TourAPI 요청 실패 (HTTP ${res.status})`);
         }
 
-        // http body를 읽어서 JSON 텍스트를 자바스크립트 객체로 변환
+        // http프로토콜의 body를 읽어서 JSON 텍스트를 자바스크립트 객체로 변환
         const data = await res.json();
 
         // 게이트웨이 에러 체크
         // data.response가 존재하는지 체크함으로써 API 서버까지 잘 요청이 전달됨을 체크할 수 있다.
-        // API 서버까지 가지 못했다면 respone  값이 존재하지 않음
+        // API 서버까지 가지 못했다면 respone 값이 존재하지 않음
         if (data.resultCode !== undefined && data.response === undefined) {
         throw new Error(`TourAPI 요청 파라미터 오류: ${data.resultMsg || data.resultCode}`);
         }
 
-        // data가 있으면 .response, .response도 존재하면 헤더를 확인해라
+        // data가 있으면 .response도 확인해서 존재하면 헤더값을 저장
+        // 패킷의 헤더를 확인해야 하기 때문에 저장하는 것
         const header = data?.response?.header;
 
         // 헤더가 존재하지 않거나 API 서버 요청 처리 과정에서 문제가 생겼다면( '0000'은 정상 코드 ) 예외 처리
@@ -83,12 +93,11 @@ const TourAPI = ( () => {
         throw new Error(`TourAPI 오류: ${header?.resultMsg || '알 수 없는 오류'}`);
         }
 
-        // data 객체 안의 response 안의 body에 실제 데이터들이 존재하지 않다면 빈 배열로 만듬 
-        // 널 병합 연산자 사용
-        let items = data.response.body?.items?.item ?? [];
+        // body.itmes.item이 없으면 ( ?? 연산자 ) 빈 배열로 처리
+        let items = data.response.body?.items?.item ?? []; 
         items = Array.isArray(items) ? items : [items]; // items이 배열이 아니라면 객체를 배열에 넣어서 배열로 형태로 변환시킴
 
-        // 캐시 저장
+        // url을 키로  items를 캐시에 저장
         cacheSet(url, items);
 
         // items( 정규화된 배열 )를 반환함
@@ -104,23 +113,29 @@ const TourAPI = ( () => {
 // -------------------------------------------------------------------------------------------------------------------
 
     // ── 여행지 목록 ──────────────────────────────────────────────────
-  function getTravelList({ numOfRows = 100, pageNo = 1, arrange = 'C', lDongRegnCd } = {}) {
+
+  function getTravelList({ numOfRows = 100, pageNo = 1, arrange = 'C', lDongRegnCd, lDongSignguCd } = {}) {
     return callApi('areaBasedList2', {
       numOfRows, pageNo, arrange,
       contentTypeId: CONTENT_TYPE.TRAVEL,
       lDongRegnCd, // 법정동 시도코드 (예: '11'=서울). 생략하면 지역 구분 없이 조회
+      lDongSignguCd, // 법정동 시군구코드. lDongRegnCd와 함께 넘겨야 유효함
     });
   }
 
   // ── 축제 목록 ────────────────────────────────────────────────────
-  function getFestivalList({ eventStartDate, eventEndDate, numOfRows = 100, pageNo = 1, lDongRegnCd } = {}) {
-    // 기본값: 오늘부터 검색 (YYYYMMDD)
+  function getFestivalList({ eventStartDate, eventEndDate, numOfRows = 100, pageNo = 1, lDongRegnCd, lDongSignguCd } = {}) {
+    // Date 객체 : 현재 시각을 담고 있는 객체
+    // toISOString() : Date객체를 문자열로 변환
+    // .slice(0, 10) : 문자열의 0부터 9 인덱스의 10개의 문자열만 잘라냄 ( 날짜 부분만 남기고 버림 )
+    // .replace : 문자열 안의 모든 - 찾아서 제거
     const today = eventStartDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
     return callApi('searchFestival2', {
       numOfRows, pageNo,
       eventStartDate: today,
       eventEndDate,
       lDongRegnCd,
+      lDongSignguCd, // 법정동 시군구코드. lDongRegnCd와 함께 넘겨야 유효함
     });
   }
 
@@ -132,12 +147,20 @@ const TourAPI = ( () => {
     return callApi('ldongCode2', { numOfRows: 20, pageNo: 1 });
   }
 
-  // ── 지역 하나에 대해서만 여행지/축제 소량 조회 ──────────────
-  function getTravelListByArea(lDongRegnCd, numOfRows = 3) {
-    return getTravelList({ numOfRows, arrange: 'Q', lDongRegnCd }); // Q=대표이미지 보장 정렬
+  // ── 시도 하나에 속한 시군구 코드 목록 ────────────────────────
+  // lDongRegnCd(시도코드)를 넘기면 그 시도의 시군구 목록을
+  // { code: '11110', name: '종로구' } 형태로 반환합니다.
+  function getSigunguCodes(lDongRegnCd) {
+    return callApi('ldongCode2', { numOfRows: 100, pageNo: 1, lDongRegnCd });
   }
-  function getFestivalListByArea(lDongRegnCd, numOfRows = 3) {
-    return getFestivalList({ numOfRows, lDongRegnCd });
+
+  // ── 지역 하나에 대해서만 여행지/축제 소량 조회 ──────────────
+  // lDongSignguCd를 넘기면 시군구 단위로 더 좁혀서 조회함
+  function getTravelListByArea(lDongRegnCd, numOfRows = 3, lDongSignguCd) {
+    return getTravelList({ numOfRows, arrange: 'Q', lDongRegnCd, lDongSignguCd }); // Q=대표이미지 보장 정렬
+  }
+  function getFestivalListByArea(lDongRegnCd, numOfRows = 3, lDongSignguCd) {
+    return getFestivalList({ numOfRows, lDongRegnCd, lDongSignguCd });
   }
   
   // ── 전체 시도를 돌면서 지역당 소량씩 모아 합치기 ────────────
@@ -213,6 +236,7 @@ const TourAPI = ( () => {
     getFestivalList,
     searchKeyword,
     getAreaCodes,
+    getSigunguCodes,
     getTravelListByArea,
     getFestivalListByArea,
     getTravelListAllAreas,
