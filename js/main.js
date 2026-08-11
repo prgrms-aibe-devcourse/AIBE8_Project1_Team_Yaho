@@ -3,6 +3,7 @@
    ============================================================ */
 import { TRANSPORTS, DESTINATIONS, POPULAR, THEMES } from './data.js';
 import { initMap } from './map.js';
+import { getPopularRegions } from './popArea.js';
 
 (function () {
   'use strict';
@@ -26,6 +27,7 @@ import { initMap } from './map.js';
     /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
     liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
     themeIndex: 0,
+    popularRegions: null, /* getPopularRegions() 로딩 전까지는 null → 샘플 데이터로 자리 표시 */
     /* 로그인 연동 전 데모용 — 실제로는 서버에서 받아와야 함 */
     loggedIn: JSON.parse(localStorage.getItem('wtg:loggedIn') || 'false'),
     recordStamps: 4,
@@ -41,6 +43,7 @@ import { initMap } from './map.js';
 
   let originLevel = 'sido';   /* 'sido' | 'sigungu' */
   let originSidoPick = null;  /* 시군구 목록 조회 중인 시/도 코드 */
+  let mapApi = null;          /* initMap()이 반환하는 { selectSigunguCode } — 인기 지역 클릭 시 사용 */
 
   /* --- 지오코딩 결과 캐시 (localStorage, TTL 10분) — 껐다 켜거나 새로고침해도 재호출 방지 --- */
   const GEO_TTL_MS = 10 * 60 * 1000;
@@ -139,12 +142,13 @@ import { initMap } from './map.js';
     }).join('');
   }
 
-  /* --- 인기 지역 --- */
+  /* --- 인기 지역 (TourAPI 주간 방문자 수 기준 상위 4곳, 사진은 샘플 데이터 그대로 유지) --- */
   function renderPopular() {
-    el.popularList.innerHTML = POPULAR.map((p, i) => `
+    const list = state.popularRegions || POPULAR.map((p) => ({ title: p.title, desc: '불러오는 중…', sigunguCode: null }));
+    el.popularList.innerHTML = list.map((p, i) => `
       <li>
-        <button class="popular__btn" type="button" data-dest="${p.destId}">
-          <img class="popular__thumb" src="${p.thumb}" alt="" />
+        <button class="popular__btn" type="button" ${p.sigunguCode ? `data-sigungu="${p.sigunguCode}"` : ''}>
+          <img class="popular__thumb" src="${POPULAR[i].thumb}" alt="" />
           <span class="popular__rank">${i + 1}</span>
           <span class="popular__body">
             <span class="popular__name">${p.title}</span>
@@ -153,6 +157,22 @@ import { initMap } from './map.js';
           ${icon('i-chevron-right', 'ico ico--chevron')}
         </button>
       </li>`).join('');
+  }
+
+  /* TourAPI 인기 지역 데이터 로딩 — 실패해도 샘플 자리표시 그대로 유지 */
+  async function loadPopularRegions() {
+    try {
+      const regions = await getPopularRegions();
+      if (!regions.length) return;
+      state.popularRegions = regions.map((r) => ({
+        title: r.sigunguNm,
+        desc: `주간 방문 ${r.visitorCount / 10000}만 명`,
+        sigunguCode: r.sigunguCode,
+      }));
+      renderPopular();
+    } catch (err) {
+      console.error('인기 지역 로드 실패:', err);
+    }
   }
 
   /* --- 인기 여행지 그리드 (좌측) --- */
@@ -334,8 +354,6 @@ import { initMap } from './map.js';
     // 핀(마커) 기능 보류 — 주석 처리
     // $$('.marker', el.markers).forEach((m) =>
     //   m.classList.toggle('is-active', m.dataset.dest === state.destId));
-    $$('.popular__btn', el.popularList).forEach((b) =>
-      b.classList.toggle('is-active', b.dataset.dest === state.destId));
   }
 
   /* ============================================================
@@ -463,13 +481,21 @@ import { initMap } from './map.js';
       });
     }
 
-    /* 인기 지역 · 인기 여행지 그리드 · 테마 카드 (지도 마커는 기능 보류로 제외) */
-    [el.popularList, el.spotGrid, el.themeTrack].filter(Boolean).forEach((root) => {
+    /* 인기 여행지 그리드 · 테마 카드 (지도 마커는 기능 보류로 제외) */
+    [el.spotGrid, el.themeTrack].filter(Boolean).forEach((root) => {
       root.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-dest]');
         if (btn) selectDestination(btn.dataset.dest);
       });
     });
+
+    /* 인기 지역 — 클릭하면 오늘의 여행지 대신 지도에서 해당 시/군/구를 선택 상태로 표시 */
+    if (el.popularList) {
+      el.popularList.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sigungu]');
+        if (btn && mapApi) mapApi.selectSigunguCode(btn.dataset.sigungu);
+      });
+    }
 
     /* 마커 호버 툴팁 — 핀(마커) 기능 보류로 주석 처리
     el.markers.addEventListener('mouseover', (e) => {
@@ -640,8 +666,9 @@ import { initMap } from './map.js';
     renderSavedCount();
     renderMyRecord();
     moveThemes(0);
+    mapApi = initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
     bindEvents();
-    initMap({ selectDestination, showToast, drawEl: el.draw, drawBtnEl: el.btnDraw });
+    loadPopularRegions();
   }
 
   document.addEventListener('DOMContentLoaded', init);
