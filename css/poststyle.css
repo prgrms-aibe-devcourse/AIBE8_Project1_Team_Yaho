@@ -403,6 +403,25 @@ img { display: block; max-width: 100%; }
   gap: 28px;
 }
 
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.btn-load-more {
+  padding: 12px 32px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-load-more:hover { border-color: var(--primary); color: var(--primary); }
+
 .post-card { cursor: pointer; }
 
 .post-thumb {
