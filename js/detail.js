@@ -373,6 +373,7 @@
       '<div class="detail-meta-row">' +
         '<div class="detail-tags"></div>' +
         '<div class="detail-actions">' +
+          (addr ? '<button class="action-btn" id="directions-btn">🧭 길찾기</button>' : '') +
           '<button class="action-btn" id="save-bookmark-btn">🔖 저장</button>' +
           '<button class="action-btn" id="share-btn">↗️ 공유</button>' +
         '</div>' +
@@ -409,6 +410,15 @@
         btn.textContent = isExpanded ? '접기' : '더 보기';
       });
     });
+
+    // ── 길찾기 버튼 (네이버 지도 검색 딥링크, todaySpot.js의 openDirections()와 동일한 방식) ──
+    var directionsBtn = document.getElementById('directions-btn');
+    if (directionsBtn) {
+      directionsBtn.addEventListener('click', function () {
+        var url = 'https://map.naver.com/p/search/' + encodeURIComponent(addr);
+        window.open(url, '_blank', 'noopener');
+      });
+    }
 
     // ── 저장(북마크) 버튼 ────────────────────────────────────────────
     var saveBtn = document.getElementById('save-bookmark-btn');
