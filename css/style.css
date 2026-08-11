@@ -649,7 +649,7 @@ body {
 .today__media { position: relative; }
 .today__img {
   width: 100%;
-  aspect-ratio: 274 / 150;
+  aspect-ratio: 1 / 1;
   border-radius: 12px;
   object-fit: cover;
   background: linear-gradient(160deg, #cfe6f7, #a9d3ee);
@@ -665,7 +665,7 @@ body {
   height: 30px;
   border-radius: var(--r-pill);
   background: rgba(255, 255, 255, .92);
-  color: #f0648f;
+  color: var(--blue-600);
   backdrop-filter: blur(4px);
   box-shadow: 0 2px 8px rgba(15, 23, 42, .18);
   transition: transform .16s var(--ease), background-color .16s var(--ease);
@@ -709,9 +709,19 @@ body {
 
 .today__desc {
   margin: 8px 0 0 7px;
+  line-height: 1.5;
+}
+.today__desc-title {
+  display: block;
+  color: var(--ink-800);
+  font-size: 15px;
+  font-weight: 700;
+}
+.today__desc-addr {
+  display: block;
+  margin-top: 2px;
   color: var(--ink-600);
   font-size: 12.8px;
-  line-height: 1.62;
 }
 
 /* --- 통계 박스 --- */

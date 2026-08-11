@@ -35,8 +35,8 @@ import { getPopularRegions } from './popArea.js';
     origin: '서울특별시 강남구',
     originId: null, /* 선택한 시/군/구 법정동 코드 — 대표좌표 조회 키로 씀 */
     useGeo: JSON.parse(localStorage.getItem('wtg:useGeo') || 'false'),
-    /* 첫 방문 시엔 시안과 동일하게 강릉이 찜된 상태로 시작 */
-    liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '["gangneung"]')),
+    /* "찜한 여행지" 카운트 — 오늘의 여행지(todaySpot.js)도 같은 키를 공유해서 찜한다 */
+    liked: new Set(JSON.parse(localStorage.getItem('wtg:liked') || '[]')),
     themeIndex: 0,
     spotCategory: '전체',
     spotPage: 1,
@@ -111,17 +111,8 @@ import { getPopularRegions } from './popArea.js';
     fareList:      $('#fareList'),
     themeTrack:    $('#themeTrack'),
 
-    todayImg:    $('#todayImg'),
-    todayRegion: $('#todayRegion'),
-    todayName:   $('#todayName'),
-    todayDesc:   $('#todayDesc'),
-    statTime:    $('#statTime'),
-    statDist:    $('#statDist'),
-
     draw:      $('.draw'),
     btnDraw:   $('#btnDraw'),
-    btnLike:   $('#btnLike'),
-    btnGo:     $('#btnGo'),
     myRecord:  $('#myRecord'),
     btnGeo:    $('#btnGeo'),
     geoLabel:  $('#geoLabel'),
@@ -371,24 +362,6 @@ import { getPopularRegions } from './popArea.js';
     }).join('');
   }
 
-  /* --- 오늘의 여행지 카드 --- */
-  function renderToday() {
-    const dest = byId(state.destId);
-    const info = dest.fares[state.transport];
-
-    el.todayImg.src        = dest.photo;
-    el.todayImg.alt        = `${dest.region} ${dest.name}`;
-    el.todayRegion.textContent = dest.region;
-    el.todayName.textContent   = dest.name;
-    el.todayDesc.innerHTML     = dest.desc;
-    el.statTime.textContent    = info ? info.time : '이용 불가';
-    el.statDist.textContent    = dest.distance;
-
-    const liked = state.liked.has(dest.id);
-    el.btnLike.setAttribute('aria-pressed', String(liked));
-    el.btnLike.setAttribute('aria-label', liked ? '찜 해제' : '찜하기');
-  }
-
   /* --- 찜 카운트 --- */
   function renderSavedCount() {
     const n = state.liked.size;
@@ -448,7 +421,6 @@ import { getPopularRegions } from './popArea.js';
 
     renderTransports();
     renderFares();
-    renderToday();
     syncActive();
 
     if (opts.toast !== false) showToast(`📍 ${dest.region} ${dest.name}`);
@@ -461,7 +433,6 @@ import { getPopularRegions } from './popArea.js';
     state.transport = key;
     renderTransports();
     renderFares();
-    renderToday();
   }
 
   /* 토스트 */
@@ -582,27 +553,10 @@ import { getPopularRegions } from './popArea.js';
     el.markers.addEventListener('focusout', () => { el.mapTip.hidden = true; });
     */
 
-    /* 찜하기 */
-    el.btnLike.addEventListener('click', () => {
-      const id = state.destId;
-      const nowLiked = !state.liked.has(id);
-      nowLiked ? state.liked.add(id) : state.liked.delete(id);
-      localStorage.setItem('wtg:liked', JSON.stringify([...state.liked]));
-
-      el.btnLike.classList.remove('is-beat');
-      void el.btnLike.offsetWidth;          /* 애니메이션 리셋 */
-      el.btnLike.classList.add('is-beat');
-
-      renderToday();
+    /* 오늘의 여행지(todaySpot.js)에서 찜 상태가 바뀌면 헤더 찜 카운트 갱신 */
+    window.addEventListener('wtg:liked-changed', () => {
+      state.liked = new Set(JSON.parse(localStorage.getItem('wtg:liked') || '[]'));
       renderSavedCount();
-      showToast(nowLiked ? '💗 찜 목록에 담았어요' : '찜을 해제했어요');
-    });
-
-    /* 떠나기 CTA */
-    el.btnGo.addEventListener('click', () => {
-      const d = byId(state.destId);
-      const t = TRANSPORTS.find((x) => x.key === state.transport);
-      showToast(`${t.emoji} ${state.origin} → ${d.name} · ${t.label} 경로를 준비할게요!`);
     });
 
     /* 내 여행 기록 */

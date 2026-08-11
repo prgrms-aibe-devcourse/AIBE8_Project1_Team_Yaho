@@ -122,13 +122,22 @@
 
       <div class="block__head">
         <h2 class="block__title block__title--lg">오늘의 여행지<span class="emoji">✦</span></h2>
+        <div class="spot-grid__pager" id="todaySpotPager">
+          <button class="spot-grid__pager-btn" type="button" id="todaySpotPrev" aria-label="이전 여행지">
+            <svg class="ico ico--chevron"><use href="#i-chevron-left"/></svg>
+          </button>
+          <span class="spot-grid__pager-label" id="todaySpotPagerLabel">1/5</span>
+          <button class="spot-grid__pager-btn" type="button" id="todaySpotNext" aria-label="다음 여행지">
+            <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
+          </button>
+        </div>
       </div>
 
       <article class="today" id="today">
         <div class="today__media">
           <img class="today__img" id="todayImg" src="images/hero-gangneung.png" alt="" />
-          <button class="today__like" type="button" id="btnLike" aria-pressed="true" aria-label="찜하기">
-            <svg class="ico"><use href="#i-heart"/></svg>
+          <button class="today__like" type="button" id="btnLike" aria-pressed="false" aria-label="찜하기">
+            <svg class="ico"><use href="#i-bookmark"/></svg>
           </button>
         </div>
 
@@ -137,18 +146,10 @@
           <h3 class="today__name" id="todayName">강릉</h3>
         </div>
 
-        <p class="today__desc" id="todayDesc">푸른 바다와 커피 향이 가득한<br />낭만 도시 강릉으로 떠나보세요!</p>
-
-        <ul class="stats">
-          <li class="stat">
-            <svg class="ico ico--blue"><use href="#i-clock"/></svg>
-            <div><span class="stat__label">예상 소요시간</span><strong class="stat__value" id="statTime">2시간 30분</strong></div>
-          </li>
-          <li class="stat">
-            <svg class="ico ico--blue"><use href="#i-route"/></svg>
-            <div><span class="stat__label">예상 거리</span><strong class="stat__value" id="statDist">218km</strong></div>
-          </li>
-        </ul>
+        <p class="today__desc">
+          <strong class="today__desc-title" id="todayTitle">강릉 커피거리</strong>
+          <span class="today__desc-addr" id="todayAddr">강원특별자치도 강릉시</span>
+        </p>
       </article>
 
       <button class="btn btn--primary btn--cta" type="button" id="btnGo">
@@ -171,6 +172,7 @@
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/topnav.js"></script>
+  <script src="js/todaySpot.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
