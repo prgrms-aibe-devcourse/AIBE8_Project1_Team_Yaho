@@ -143,10 +143,14 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     const sigunguName = (bjdCodes && bjdCodes.sigungu[sigunguId]) || '';
     const fullName = sigunguName ? `${sidoName} ${sigunguName}` : sidoName;
 
+    // 구가 여러 개인 시는 TourAPI에 "시" 자체 코드로 등록된 여행지가 없으므로
+    // (모든 주소가 하위 구 코드로만 태깅됨) 그 구들 각각으로 나눠서 조회 후 합침
+    const group = resolveRegionGroup(sigunguId);
+
     el.previewTitle.textContent = fullName;
     el.previewMore.textContent = `${sigunguName || sidoName} 살펴보기`;
     el.previewMore.onclick = () => {
-      location.href = `postList.html?area=${sidoId}&sigungu=${sigunguId}`;
+      location.href = `postList.html?area=${sidoId}&sigungu=${group.memberIds.join(',')}`;
     };
     el.previewGrid.innerHTML = '<li class="region-preview__empty">불러오는 중…</li>';
     el.preview.hidden = false;
@@ -154,8 +158,17 @@ export function initMap({ selectDestination, showToast, drawEl, drawBtnEl }) {
     let items = [];
     try {
       // TourAPI 시군구 코드는 5자리 법정동코드가 아니라 시도코드를 뺀 3자리 코드로만 조회됨
-      const sigunguSuffix = sigunguId && sigunguId.length > 2 ? sigunguId.slice(2) : sigunguId;
-      items = await TourAPI.getTravelListByArea(MERGED_SIDO_BASE[sidoId] || sidoId, 4, sigunguSuffix);
+      const baseSidoId = MERGED_SIDO_BASE[sidoId] || sidoId;
+      const lists = await Promise.all(group.memberIds.map((id) => {
+        const suffix = id && id.length > 2 ? id.slice(2) : id;
+        return TourAPI.getTravelListByArea(baseSidoId, 4, suffix).catch(() => []);
+      }));
+      const seen = new Set();
+      items = lists.flat().filter((it) => {
+        if (seen.has(it.contentid)) return false;
+        seen.add(it.contentid);
+        return true;
+      });
     } catch (err) {
       console.error('지역 미리보기 여행지 조회 실패:', err);
     }

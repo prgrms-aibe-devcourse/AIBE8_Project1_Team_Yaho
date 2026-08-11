@@ -2,8 +2,9 @@
 
 (function () {
   // ── 상태 ──────────────────────────────────────────────────────────────
-  let activeAreaCode    = 'all'; // '전체' 또는 lDongRegnCd (예: '11')
-  let activeSigunguCode = 'all'; // '전체' 또는 lDongSignguCd (예: '11110')
+  let activeAreaCode      = 'all'; // '전체' 또는 lDongRegnCd (예: '11')
+  let activeSigunguCode   = 'all'; // '전체' 또는 lDongSignguCd (예: '11110'), 구가 여러 개인 시는 콤마로 join된 값
+  let activeSigunguGroupName = ''; // activeSigunguCode가 그룹(콤마 join)일 때만 채워지는 표시용 시 이름
   let sigunguPanelOpen  = false; // 시도 하위의 시군구 필터 행 노출 여부 (토글)
   let activeTab         = 'travel';
 
@@ -240,8 +241,45 @@
     });
   }
 
+  // ── 구가 여러 개인 시(예: 수원시 장안/권선/팔달/영통구) 전체 여행지 조회 ──
+  // TourAPI에는 "시" 자체 코드로 등록된 여행지가 없으므로 하위 구 코드들을
+  // 각각 조회해서 합침. 캐시 키는 ensureSigunguPosts와 동일한 규칙(area_sigungu)을
+  // 따르되 sigungu 자리에 콤마로 join한 코드를 써서 getFiltered()가 그대로 찾게 함
+  function ensureSigunguPostsGroup(pillCode, codes) {
+    let key = pillCode + '_' + codes.join(',');
+    if (sigunguPostsCache[key]) return;
+
+    let baseCode = resolveBaseAreaCode(pillCode);
+
+    sigunguPostsLoading = true;
+    render();
+
+    Promise.all(codes.map(function (code) {
+      return Promise.all([
+        TourAPI.getTravelListByArea(baseCode, ITEMS_PER_SIGUNGU, code).catch(function () { return []; }),
+        TourAPI.getFestivalListByArea(baseCode, ITEMS_PER_SIGUNGU, code).catch(function () { return []; }),
+      ]);
+    })).then(function (results) {
+      let travel = [], festival = [];
+      results.forEach(function (r) {
+        travel   = travel.concat(r[0]);
+        festival = festival.concat(r[1]);
+      });
+      sigunguPostsCache[key] = {
+        travel:   dedupeById(travel).map(mapTravelItem),
+        festival: dedupeById(festival).map(mapFestivalItem),
+      };
+    }).catch(function () {
+      sigunguPostsCache[key] = { travel: [], festival: [] };
+    }).then(function () {
+      sigunguPostsLoading = false;
+      render();
+    });
+  }
+
   // ── 시도 클릭 ─────────────────────────────────────────────────────────
   function handleAreaClick(code) {
+    activeSigunguGroupName = '';
     if (code === 'all') {
       activeAreaCode    = 'all';
       activeSigunguCode = 'all';
@@ -269,7 +307,13 @@
   function applyInitialRegionFromUrl() {
     if (!initialArea) return;
 
-    let sigunguCode = initialSigungu && initialSigungu.length > 2 ? initialSigungu.slice(2) : initialSigungu;
+    // 지도 쪽에서 구가 여러 개인 시는 그 구들의 5자리 코드를 콤마로 join해서 넘겨줌
+    // (예: '41111,41113,41115,41117') — 각각을 3자리 suffix로 변환
+    let rawSigunguCodes = initialSigungu ? initialSigungu.split(',') : [];
+    let sigunguCodes = rawSigunguCodes.map(function (c) {
+      return c.length > 2 ? c.slice(2) : c;
+    });
+    let sigunguCode = sigunguCodes[0]; // 단일 코드 경로(광주/전남 분리 역추적)는 첫 코드 기준으로 동일하게 동작
 
     let pillCode = initialArea;
     // area가 그 자체로 pill이면(대부분의 시도) 그대로 사용 — mergedSignguSplit의 3자리 코드는
@@ -288,24 +332,75 @@
     activeAreaCode   = pillCode;
     sigunguPanelOpen = true;
     ensureSigunguList(pillCode).then(function (list) {
-      if (sigunguCode && list.some(function (s) { return s.code === sigunguCode; })) {
-        activeSigunguCode = sigunguCode;
-        ensureSigunguPosts(pillCode, sigunguCode);
+      let validCodes = sigunguCodes.filter(function (code) {
+        return list.some(function (s) { return s.code === code; });
+      });
+      if (validCodes.length === 1) {
+        activeSigunguCode = validCodes[0];
+        ensureSigunguPosts(pillCode, validCodes[0]);
+      } else if (validCodes.length > 1) {
+        activeSigunguCode = validCodes.join(',');
+        // 매칭된 leaf 이름들의 공통 접두어(첫 공백 이전, 예: "수원시 장안구" → "수원시")를 표시용으로 사용
+        let names = list.filter(function (s) { return validCodes.indexOf(s.code) !== -1; }).map(function (s) { return s.name; });
+        activeSigunguGroupName = names.length ? names[0].split(' ')[0] : '';
+        ensureSigunguPostsGroup(pillCode, validCodes);
       }
       render();
     });
   }
 
   // ── 시군구 클릭 ───────────────────────────────────────────────────────
-  function handleSigunguClick(code) {
+  // code는 단일 코드('111') 또는 구가 여러 개인 시를 고른 경우 콤마 join된 코드('111,113,115,117')
+  function handleSigunguClick(code, groupName) {
+    activeSigunguGroupName = '';
     if (code === 'all') {
       activeSigunguCode = 'all';
+    } else if (code.indexOf(',') !== -1) {
+      activeSigunguCode      = code;
+      activeSigunguGroupName = groupName || '';
+      ensureSigunguPostsGroup(activeAreaCode, code.split(','));
     } else {
       activeSigunguCode = code;
       ensureSigunguPosts(activeAreaCode, code);
     }
     render();
     document.querySelector('.tabs').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── 시군구 목록 중 이름에 공백이 있는 항목("수원시 장안구" 등)은 구가 여러 개인
+  // 시이므로, 개별 구 pill 대신 그 시를 대표하는 pill 하나로 묶어서 보여줌 —
+  // 클릭하면 하위 구 전체 여행지를 합쳐서 보여준다(지도 쪽 resolveRegionGroup과 동일한 아이디어)
+  function groupSigunguList(list) {
+    // 1차: 이름에 공백 있는 항목("수원시 장안구")들의 시 이름별 코드 목록을 먼저 모음
+    let cityMap = {}; // 시 이름 → 그룹 pill 객체
+    list.forEach(function (s) {
+      let spaceIdx = s.name.indexOf(' ');
+      if (spaceIdx === -1) return;
+      let cityName = s.name.slice(0, spaceIdx);
+      if (!cityMap[cityName]) cityMap[cityName] = { code: '', name: cityName, codes: [] };
+      cityMap[cityName].codes.push(s.code);
+    });
+
+    // 2차: TourAPI가 "수원시" 자체도 별도 코드로 내려주는 경우가 있어, 같은 시 이름은
+    // 한 번만 넣도록 중복 제거 (구가 있는 시는 그룹 pill 하나로, 나머진 그대로)
+    let result = [];
+    let added  = {};
+    list.forEach(function (s) {
+      let spaceIdx = s.name.indexOf(' ');
+      let cityName = spaceIdx === -1 ? s.name : s.name.slice(0, spaceIdx);
+      if (cityMap[cityName]) {
+        if (added[cityName]) return;
+        added[cityName] = true;
+        result.push(cityMap[cityName]);
+      } else {
+        result.push({ code: s.code, name: s.name });
+      }
+    });
+
+    result.forEach(function (item) {
+      if (item.codes) item.code = item.codes.join(',');
+    });
+    return result;
   }
 
   // ── 지역 필터 렌더 (TourAPI 공식 시도 코드 기준) ─────────────────────
@@ -342,17 +437,17 @@
       return;
     }
 
-    let list  = sigunguCache[activeAreaCode] || [];
+    let list  = groupSigunguList(sigunguCache[activeAreaCode] || []);
     let pills = [{ code: 'all', name: '전체' }].concat(list);
 
     row.innerHTML = pills.map(function (s) {
       return '<button class="sigungu-pill' + (s.code === activeSigunguCode ? ' active' : '') +
-        '" data-code="' + s.code + '">' + escHtml(s.name) + '</button>';
+        '" data-code="' + s.code + '" data-name="' + escHtml(s.name) + '">' + escHtml(s.name) + '</button>';
     }).join('');
 
     row.querySelectorAll('.sigungu-pill').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        handleSigunguClick(btn.dataset.code);
+        handleSigunguClick(btn.dataset.code, btn.dataset.name);
       });
     });
   }
@@ -490,9 +585,10 @@
           '<button id="reset-btn">전체 보기</button>' +
         '</div>';
       document.getElementById('reset-btn').addEventListener('click', function () {
-        activeAreaCode    = 'all';
-        activeSigunguCode = 'all';
-        sigunguPanelOpen  = false;
+        activeAreaCode         = 'all';
+        activeSigunguCode      = 'all';
+        activeSigunguGroupName = '';
+        sigunguPanelOpen       = false;
         render();
       });
       return;
@@ -508,7 +604,9 @@
       if (areas[i].code === activeAreaCode) { activeAreaName = areas[i].name; break; }
     }
     let activeSigunguName = '';
-    if (activeSigunguCode !== 'all') {
+    if (activeSigunguCode.indexOf(',') !== -1) {
+      activeSigunguName = activeSigunguGroupName;
+    } else if (activeSigunguCode !== 'all') {
       let list = sigunguCache[activeAreaCode] || [];
       for (let i = 0; i < list.length; i++) {
         if (list[i].code === activeSigunguCode) { activeSigunguName = list[i].name; break; }
