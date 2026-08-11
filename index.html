@@ -72,10 +72,10 @@
 
       <nav class="gnb" aria-label="주 메뉴">
         <ul class="gnb__list">
-          <li><a class="gnb__item is-active" href="#" aria-current="page"><svg class="ico"><use href="#i-home"/></svg>여행 지도</a></li>
+          <li><a class="gnb__item is-active" href="/index.html" aria-current="page"><svg class="ico"><use href="#i-home"/></svg>여행 지도</a></li>
           <li><a class="gnb__item" href="#"><svg class="ico"><use href="#i-sparkles"/></svg>여행 추천</a></li>
-          <li><a class="gnb__item" href="#"><svg class="ico"><use href="#i-notebook"/></svg>여행 수첩</a></li>
-          <li><a class="gnb__item" href="#"><svg class="ico"><use href="#i-user"/></svg>마이페이지</a></li>
+          <li><a class="gnb__item" href="./bookmark.html"><svg class="ico"><use href="#i-notebook"/></svg>여행 수첩</a></li>
+          <li><a class="gnb__item" href="./mypage.html"><svg class="ico"><use href="#i-user"/></svg>마이페이지</a></li>
         </ul>
       </nav>
 
@@ -139,6 +139,15 @@
       <section class="block">
         <div class="block__head block__head--pad">
           <h2 class="block__title">이런 여행지 어때요?</h2>
+          <div class="spot-grid__pager" id="spotPager">
+            <button class="spot-grid__pager-btn" type="button" id="spotPagerPrev" aria-label="이전 페이지">
+              <svg class="ico ico--chevron"><use href="#i-chevron-left"/></svg>
+            </button>
+            <span class="spot-grid__pager-label" id="spotPagerLabel">1/5</span>
+            <button class="spot-grid__pager-btn" type="button" id="spotPagerNext" aria-label="다음 페이지">
+              <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
+            </button>
+          </div>
         </div>
         <ul class="filter-row" id="categoryFilter">
           <li><button class="chip chip--filter is-active" type="button" data-cat="전체">전체</button></li>
@@ -147,7 +156,8 @@
           <li><button class="chip chip--filter" type="button" data-cat="체험">체험</button></li>
           <li><button class="chip chip--filter" type="button" data-cat="레저">레저</button></li>
           <li><button class="chip chip--filter" type="button" data-cat="쇼핑">쇼핑</button></li>
-          <li><button class="chip chip--filter" type="button" data-cat="숙박">숙박</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="문화">문화</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="음식">음식</button></li>
         </ul>
         <ul class="spot-grid" id="spotGrid"></ul>
       </section>
@@ -232,6 +242,7 @@
 
   <script src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=yaueu35tew&submodules=geocoder"></script>
   <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
