@@ -22,6 +22,10 @@
   let ITEMS_PER_AREA    = 20; // 지역(시도)당 최소 보장 개수
   let ITEMS_PER_SIGUNGU = 20; // 시군구당 최대 개수 (부족하면 있는 만큼만)
 
+  const POSTS_PAGE_SIZE = 9;         // "더보기" 클릭마다 추가로 보여줄 개수
+  let visibleCount      = POSTS_PAGE_SIZE; // 대표카드를 제외한 grid에 지금 보여줄 개수
+  let lastFilterKey     = null;      // 탭/지역 필터가 바뀌었는지 감지해서 visibleCount를 리셋하기 위함
+
   const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&h=600&fit=crop&auto=format';
 
   // ── TourAPI가 하나의 시도로 통합해서 내려주는 지역을 화면에서는 분리해서 표시 ──
@@ -471,6 +475,13 @@
 
     let filtered = getFiltered();
 
+    // 탭/지역 필터가 바뀌었으면 더보기로 늘려온 개수를 처음 상태로 되돌림
+    let filterKey = activeTab + '|' + activeAreaCode + '|' + activeSigunguCode;
+    if (filterKey !== lastFilterKey) {
+      lastFilterKey = filterKey;
+      visibleCount  = POSTS_PAGE_SIZE;
+    }
+
     if (filtered.length === 0) {
       container.innerHTML =
         '<div class="empty-state">' +
@@ -487,8 +498,10 @@
       return;
     }
 
-    let featured = filtered[0];
-    let rest     = filtered.slice(1);
+    let featured    = filtered[0];
+    let rest        = filtered.slice(1);
+    let visibleRest = rest.slice(0, visibleCount);
+    let hasMore     = rest.length > visibleRest.length;
 
     let activeAreaName = 'all';
     for (let i = 0; i < areas.length; i++) {
@@ -504,19 +517,33 @@
     let regionLabel = activeAreaCode === 'all' ? '전국' : activeAreaName + (activeSigunguName ? ' ' + activeSigunguName : '');
     let sectionLabel = regionLabel + ' ' + (activeTab === 'travel' ? '여행지 모음' : '축제 일정');
 
-    let gridHTML = rest.length > 0
+    let gridHTML = visibleRest.length > 0
       ? '<h2 class="section-title">' + escHtml(sectionLabel) + '</h2>' +
-        '<div class="post-grid">' + rest.map(postCardHTML).join('') + '</div>'
+        '<div class="post-grid" id="post-grid">' + visibleRest.map(postCardHTML).join('') + '</div>' +
+        (hasMore ? '<div class="load-more-wrap"><button type="button" class="btn-load-more" id="load-more-btn">더보기</button></div>' : '')
       : '';
 
     container.innerHTML = featuredCardHTML(featured) + gridHTML;
     loadFeaturedOverview(featured);
 
-    container.querySelectorAll('[data-href]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        window.location.href = el.dataset.href;
-      });
-    });
+    let loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) loadMoreBtn.addEventListener('click', handleLoadMore);
+  }
+
+  // ── 더보기: 대표카드는 그대로 두고 grid에 다음 9개만 이어붙임 ─────────
+  function handleLoadMore() {
+    let rest = getFiltered().slice(1);
+    let previousCount = visibleCount;
+    visibleCount = Math.min(rest.length, visibleCount + POSTS_PAGE_SIZE);
+
+    let newItems = rest.slice(previousCount, visibleCount);
+    let grid = document.getElementById('post-grid');
+    if (grid) grid.insertAdjacentHTML('beforeend', newItems.map(postCardHTML).join(''));
+
+    if (visibleCount >= rest.length) {
+      let loadMoreBtn = document.getElementById('load-more-btn');
+      if (loadMoreBtn) loadMoreBtn.remove();
+    }
   }
 
   // ── 전체 렌더 ────────────────────────────────────────────────────────
@@ -532,6 +559,14 @@
       activeTab = btn.dataset.tab;
       render();
     });
+  });
+
+  // ── 카드 클릭 (이벤트 위임) ──────────────────────────────────────────
+  // 더보기로 새 카드가 이어붙는(append) 경우에도 새로 리스너를 달 필요 없이
+  // 컨테이너 하나에만 걸어두고 클릭된 카드를 그때그때 찾아서 처리
+  document.getElementById('posts-container').addEventListener('click', function (e) {
+    let card = e.target.closest('[data-href]');
+    if (card) window.location.href = card.dataset.href;
   });
 
   // ── 초기 로드 ────────────────────────────────────────────────────────
