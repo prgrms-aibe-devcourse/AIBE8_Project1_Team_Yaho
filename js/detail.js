@@ -78,6 +78,61 @@
     }, 2200);
   }
 
+  // ── 공유 모달 ────────────────────────────────────────────────────────
+  function ensureShareModal() {
+    var overlay = document.getElementById('share-modal-overlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'share-modal-overlay';
+    overlay.className = 'share-modal-overlay';
+    overlay.innerHTML =
+      '<div class="share-modal" role="dialog" aria-modal="true">' +
+        '<div class="share-modal-header">' +
+          '<h3>공유하기</h3>' +
+          '<button type="button" class="share-modal-close" aria-label="닫기">✕</button>' +
+        '</div>' +
+        '<div class="share-modal-sns">' +
+          '<button type="button" class="share-sns-btn" data-sns="facebook">' +
+            '<span class="share-sns-icon share-sns-facebook">f</span><span>페이스북</span>' +
+          '</button>' +
+          '<button type="button" class="share-sns-btn" data-sns="x">' +
+            '<span class="share-sns-icon share-sns-x">✕</span><span>엑스</span>' +
+          '</button>' +
+          '<button type="button" class="share-sns-btn" data-sns="kakao">' +
+            '<span class="share-sns-icon share-sns-kakao">talk</span><span>카카오톡</span>' +
+          '</button>' +
+          '<button type="button" class="share-sns-btn" data-sns="band">' +
+            '<span class="share-sns-icon share-sns-band">b</span><span>밴드</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="share-modal-url-row">' +
+          '<input type="text" class="share-modal-url-input" id="share-modal-url" readonly>' +
+          '<button type="button" class="share-modal-copy-btn" id="share-modal-copy">URL복사</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeShareModal();
+    });
+    overlay.querySelector('.share-modal-close').addEventListener('click', closeShareModal);
+
+    return overlay;
+  }
+
+  function openShareModal(url) {
+    var overlay = ensureShareModal();
+    var input = document.getElementById('share-modal-url');
+    if (input) input.value = url;
+    overlay.classList.add('open');
+  }
+
+  function closeShareModal() {
+    var overlay = document.getElementById('share-modal-overlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
   // 지금 보고 있는 상세 페이지로 돌아올 수 있는 링크 (postList.js의 detailLink()와 동일한 형태)
   function buildSelfLink() {
     var url = 'detail.html?id=' + contentId + '&type=' + contentTypeId;
@@ -256,7 +311,7 @@
         '<div class="detail-tags"></div>' +
         '<div class="detail-actions">' +
           '<button class="action-btn" id="save-bookmark-btn">🔖 저장</button>' +
-          '<button class="action-btn">↗️ 공유</button>' +
+          '<button class="action-btn" id="share-btn">↗️ 공유</button>' +
         '</div>' +
       '</div>' +
 
@@ -304,6 +359,14 @@
         var nowSaved = toggleBookmark(contentId, heroImage, buildSelfLink());
         refreshSaveBtnLabel();
         showToast(nowSaved ? '북마크에 저장했습니다' : '북마크에서 제거했습니다');
+      });
+    }
+
+    // ── 공유 버튼 ────────────────────────────────────────────────────
+    var shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function () {
+        openShareModal(new URL(buildSelfLink(), window.location.href).href);
       });
     }
   }
