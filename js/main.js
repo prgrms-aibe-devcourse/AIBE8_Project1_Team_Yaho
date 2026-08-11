@@ -141,7 +141,6 @@ import { getPopularRegions } from './popArea.js';
     el.popularList.innerHTML = list.map((p, i) => `
       <li>
         <button class="popular__btn" type="button" ${p.sigunguCode ? `data-sigungu="${p.sigunguCode}"` : ''}>
-          <img class="popular__thumb" src="${POPULAR[i].thumb}" alt="" />
           <span class="popular__rank">${i + 1}</span>
           <span class="popular__body">
             <span class="popular__name">${p.title}</span>
