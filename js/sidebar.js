@@ -9,6 +9,8 @@
  *
  * - 프로필 이름/아바타는 app.js 가 전역으로 갖고 있는 state.profile 값을
  *   그대로 읽어온다. (그래서 <script> 순서가 app.js -> sidebar.js 여야 한다)
+ *   state.profile은 Supabase에서 비동기로 채워지므로, window.dataReady()가
+ *   끝난 뒤에 그린다 (app.js 참고).
  * - 어떤 메뉴를 활성 상태로 보여줄지는 <body data-page="..."> 값으로 판단한다.
  *   - data-page="mypage"                                     -> My page 활성
  *   - data-page="album-list" / "album-detail" / "album-edit" -> Album 활성
@@ -67,4 +69,7 @@ const Sidebar = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => Sidebar.render());
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.dataReady === 'function') await window.dataReady();
+  Sidebar.render();
+});

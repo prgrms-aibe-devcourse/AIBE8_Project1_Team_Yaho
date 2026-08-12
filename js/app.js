@@ -2,7 +2,7 @@
    여행 다이어리 - 공통 상태 관리 + 공통 유틸 + login/mypage 로직
 
    ⚠️ 이 파일(app.js)은 모든 페이지가 공통으로 불러 씁니다.
-      상태 관리(localStorage), toast, escapeHtml 같은 공통 함수와
+      상태 관리(Supabase), toast, escapeHtml 같은 공통 함수와
       "mypage" 페이지 로직만 여기 있습니다.
 
       아래 페이지들의 로직은 각자 자기 파일로 분리되어 있습니다:
@@ -15,7 +15,8 @@
        앨범 페이지를 열면 렌더링이 두 번씩 실행되는 문제가 있었습니다.
        지금은 app.js에는 공통 코드만, 나머지는 각 페이지 전용 js에만 있습니다)
 
-      스크립트 로딩 순서: app.js -> topnav.js -> sidebar.js -> (album.js | bookmark.js)
+      스크립트 로딩 순서: supabaseClient.js -> authState.js -> app.js ->
+      topnav.js -> sidebar.js -> (album.js | bookmark.js)
       login.js/register.js는 topnav.js/sidebar.js가 필요 없는 단독 페이지라서
       app.js 바로 다음에 로드됩니다 (login.html/register.html 참고).
 
@@ -24,17 +25,18 @@
       swatchButtonsHtml, fileToDataUrl, page 를 그대로 사용하므로 반드시
       app.js보다 나중에 로드됩니다.
 
-      ⚠️ 로그인/회원가입은 이제 Supabase Auth가 담당합니다 (js/authState.js,
-      js/login.js, js/register.js 참고). 이 파일의 STORAGE_KEY(state, 프로필+
-      앨범)는 아직 Supabase로 옮기기 전 단계라 localStorage에 남아있습니다.
+      ⚠️ 로그인/회원가입은 Supabase Auth가 담당합니다 (js/authState.js,
+      js/login.js, js/register.js 참고). 프로필/앨범 데이터는 이제 이
+      파일이 Supabase 테이블(profiles/albums/album_entries)에서 비동기로
+      불러옵니다 — 예전(localStorage)에는 `const state = loadState()`가
+      "동기적으로" 한 번에 끝났지만, 지금은 비동기라서 sidebar.js/album.js/
+      아래 mypage 코드가 window.dataReady()로 로드가 끝나기를 기다려야 합니다.
 
       각 페이지는 <body data-page="..."> 로 자기 자신을 표시하고,
       모든 js 파일은 이 값을 읽어서 "지금 이 페이지에 필요한 코드만" 실행합니다.
       (다른 페이지에만 있는 요소를 찾다가 null 이 나와서
        스크립트 전체가 멈추는 사고를 막기 위한 구조입니다)
    ============================================================ */
-
-const STORAGE_KEY = 'travelDiaryState_v1';
 
 // 앨범 카드 / 수정 페이지에서 고를 수 있는 색상 팔레트 (10가지)
 const SWATCHES = [
@@ -50,7 +52,7 @@ const page = document.body.dataset.page; // 현재 페이지 이름
 // bookmark는 이번 요청 범위에 없어서 그대로 둔다 — 막고 싶으면 아래 배열에 'bookmark' 추가.
 //
 // ⚠️ Supabase 세션 확인은 비동기라서, 새로고침 직후 아주 짧은 순간 동안은
-// 이 페이지의 다른 코드(sidebar.js 등)가 먼저 실행될 수 있다. 리다이렉트가
+// 이 페이지의 다른 코드(sidebar.js 등)가 먼저 실행될 수 있다. 리다이렉트이
 // 필요한 경우 window.authReady()가 끝난 뒤 location.href로 넘어간다.
 const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edit'];
 
@@ -67,54 +69,69 @@ const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edi
   location.href = 'login.html';
 })();
 
-/* ---------------- 초기 시드 데이터 ---------------- */
-function seedState(){
+/* ============================================================
+   프로필 / 앨범 데이터 (Supabase)
+   --------------------------------------------------------------
+   state.profile / state.albums 는 화면 코드(sidebar.js, album.js,
+   이 파일의 mypage 블록)가 예전 localStorage 시절과 똑같은 모양으로
+   읽을 수 있도록 아래 mapAlbumRow()에서 DB 컬럼명을 기존 필드명으로
+   맞춰준다 (예: start_date -> start, photo_url -> photo).
+
+   로그인/앨범 데이터가 필요 없는 페이지(login, register 등)에서는
+   아무것도 불러오지 않고 곧바로 ready 처리한다.
+   ============================================================ */
+let state = { profile: { name: '', email: '', avatar: null }, albums: [] };
+
+let resolveDataReady;
+const dataReadyPromise = new Promise((resolve) => { resolveDataReady = resolve; });
+window.dataReady = function(){ return dataReadyPromise; };
+
+function mapAlbumRow(row){
   return {
-    profile: { name: '여행자', email: 'traveler@gmail.com', avatar: null },
-    albums: [
-      {
-        id: 'a1',
-        title: '강릉 바다 여행',
-        location: '강원도 강릉',
-        start: '2026-08-07',
-        end: '2026-08-10',
-        color: SWATCHES[0],
-        entries: [
-          {
-            id: 'e1',
-            photo: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&q=80',
-            diary: '푸른 바다와 커피 향이 가득한 낭만 도시 강릉으로 떠났다. 경포대 해변에서 맞이한 일출은 정말 잊을 수 없는 순간이었고, 강릉 중앙시장에서 먹은 감자옹심이는 너무 맛있었다. 안목 해변 카페 거리에서 커피 한 잔 마시며 바다를 바라보는 그 여유로움이 아직도 생생하다.'
-          },
-          {
-            id: 'e2',
-            photo: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&q=80',
-            diary: '맛있는 저녁 연어 스테이크의 부드러움. 웨이팅 5시간의 보람이 있던 식사였다.\n나중에 도랑의 등파육도 웨이팅해서 먹어봐야지'
-          }
-        ]
-      },
-      { id: 'a2', title: '제주 한달 살기', location: '제주도', start: '2026-10-01', end: '2026-10-31', color: SWATCHES[1], entries: [] },
-      { id: 'a3', title: '부산 광안리 주말 여행', location: '부산 광안리', start: '2026-11-07', end: '2026-11-08', color: SWATCHES[2], entries: [] },
-      { id: 'a4', title: '전주 한옥마을 투어', location: '전주 한옥마을', start: '2026-11-18', end: '2026-11-24', color: SWATCHES[3], entries: [] },
-      { id: 'a5', title: '서울 당일치기 여행', location: '서울', start: '2026-12-25', end: '2026-12-25', color: SWATCHES[4], entries: [] }
-    ]
+    id: row.id,
+    title: row.title,
+    location: row.location,
+    start: row.start_date || '',
+    end: row.end_date || '',
+    color: row.color,
+    entries: (row.album_entries || [])
+      .slice()
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .map(e => ({ id: e.id, photo: e.photo_url, diary: e.diary || '' })),
   };
 }
 
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){ console.warn('state load failed', e); }
-  const seeded = seedState();
-  saveState(seeded);
-  return seeded;
-}
-function saveState(s){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
-  catch(e){ console.warn('state save failed', e); }
+async function loadState(){
+  const user = window.getCurrentUser();
+  if (!user) { resolveDataReady(); return; } // 비로그인이면 위 가드가 곧 로그인 페이지로 보낸다
+
+  const [{ data: profileRow }, { data: albumRows, error: albumsError }] = await Promise.all([
+    window.supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    window.supabaseClient
+      .from('albums')
+      .select('*, album_entries(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  state.profile = {
+    name: (profileRow && profileRow.name) || (user.email ? user.email.split('@')[0] : '여행자'),
+    // 이메일은 Supabase Auth(auth.users)의 값을 그대로 쓴다. 변경하려면
+    // 인증 이메일 확인 절차가 필요해서, 이 화면에서는 표시만 하고 수정은
+    // 막아둔다 (아래 mypage 블록의 email-edit-btn 참고).
+    email: user.email || '',
+    avatar: (profileRow && profileRow.avatar_url) || null,
+  };
+  state.albums = albumsError ? [] : (albumRows || []).map(mapAlbumRow);
+
+  resolveDataReady();
 }
 
-const state = loadState();
+(async function initData(){
+  if (LOGIN_REQUIRED_PAGES.indexOf(page) === -1) { resolveDataReady(); return; }
+  await window.authReady();
+  await loadState();
+})();
 
 /* ---------------- 공통 유틸 ---------------- */
 let toastTimer = null;
@@ -147,7 +164,7 @@ function dayCount(start, end){
   return diff > 0 ? diff : 1;
 }
 
-// 페이지 이동 시 함께 넘어온 쿼리스트링 값을 읽는다 (예: album-detail.html?id=a1 -> "a1")
+// 페이지 이동 시 함께 넘어온 쿼리스트링 값을 읽는다 (예: album-detail.html?id=... -> 그 값)
 function getQueryParam(name){
   return new URLSearchParams(location.search).get(name);
 }
@@ -196,71 +213,89 @@ on('back-to-list-btn', 'click', ()=>{
    2) mypage.html - 내 정보 관리
    ============================================================ */
 if(page === 'mypage'){
+  (async function initMyPage(){
+    await window.dataReady();
 
-  function applyAvatar(){
-    const url = state.profile.avatar;
-    [document.getElementById('sidebar-avatar'), document.getElementById('hero-avatar')].forEach(el=>{
-      if(!el) return;
-      el.style.backgroundImage = url ? `url(${url})` : '';
-    });
-  }
+    const user = window.getCurrentUser();
 
-  function renderMyPage(){
-    document.getElementById('hero-name').textContent = state.profile.name + ' 님,';
-    document.getElementById('name-input').value = state.profile.name;
-    document.getElementById('email-input').value = state.profile.email;
-    applyAvatar();
-  }
+    function applyAvatar(){
+      const url = state.profile.avatar;
+      [document.getElementById('sidebar-avatar'), document.getElementById('hero-avatar')].forEach(el=>{
+        if(!el) return;
+        el.style.backgroundImage = url ? `url(${url})` : '';
+      });
+    }
 
-  function wireEditableField(inputId, editBtnId, onSave){
-    const input = document.getElementById(inputId);
-    const btn = document.getElementById(editBtnId);
-    btn.addEventListener('click', ()=>{
-      if(input.disabled){
-        input.disabled = false;
-        input.focus();
-        input.select();
-        btn.textContent = '저장';
-        btn.classList.add('is-save');
+    function renderMyPage(){
+      document.getElementById('hero-name').textContent = state.profile.name + ' 님,';
+      document.getElementById('name-input').value = state.profile.name;
+      document.getElementById('email-input').value = state.profile.email;
+      applyAvatar();
+    }
+
+    // 이름: 입력값을 profiles 테이블에 실제로 저장한다.
+    const nameInput = document.getElementById('name-input');
+    const nameBtn = document.getElementById('name-edit-btn');
+    nameBtn.addEventListener('click', async ()=>{
+      if(nameInput.disabled){
+        nameInput.disabled = false;
+        nameInput.focus();
+        nameInput.select();
+        nameBtn.textContent = '저장';
+        nameBtn.classList.add('is-save');
       } else {
-        input.disabled = true;
-        btn.textContent = '수정';
-        btn.classList.remove('is-save');
-        onSave(input.value.trim());
-        saveState(state);
+        nameInput.disabled = true;
+        nameBtn.textContent = '수정';
+        nameBtn.classList.remove('is-save');
+        const val = nameInput.value.trim();
+        if(val){
+          state.profile.name = val;
+          document.getElementById('hero-name').textContent = state.profile.name + ' 님,';
+          renderSidebarProfile();
+          const { error } = await window.supabaseClient
+            .from('profiles')
+            .update({ name: val })
+            .eq('id', user.id);
+          if (error) { toast('이름 저장에 실패했습니다'); return; }
+        }
         toast('저장되었습니다');
       }
     });
-  }
 
-  wireEditableField('name-input', 'name-edit-btn', (val)=>{
-    if(val) state.profile.name = val;
-    document.getElementById('hero-name').textContent = state.profile.name + ' 님,';
-    renderSidebarProfile();
-  });
-  wireEditableField('email-input', 'email-edit-btn', (val)=>{
-    if(val) state.profile.email = val;
-  });
-
-  on('password-btn', 'click', ()=>{
-    const current = prompt('현재 비밀번호를 입력하세요');
-    if(current === null) return;
-    const next = prompt('새 비밀번호를 입력하세요');
-    if(next === null || next.trim() === '') return;
-    toast('비밀번호가 변경되었습니다');
-  });
-
-  on('change-photo-btn', 'click', ()=> document.getElementById('avatar-input').click());
-  on('avatar-input', 'change', (e)=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    fileToDataUrl(file, (url)=>{
-      state.profile.avatar = url;
-      saveState(state);
-      applyAvatar();
-      toast('프로필 사진이 변경되었습니다');
+    // 이메일: Supabase Auth(auth.users)의 이메일을 그대로 보여주기만 한다.
+    // 이메일을 바꾸려면 인증 메일 확인 절차가 필요해서(supabase.auth.updateUser),
+    // 이번 업데이트 범위에서는 "수정"을 누르면 안내만 띄운다.
+    on('email-edit-btn', 'click', ()=>{
+      toast('이메일은 가입한 계정과 연결되어 있어 여기서 바로 수정할 수 없습니다');
     });
-  });
 
-  renderMyPage();
+    on('password-btn', 'click', ()=>{
+      const current = prompt('현재 비밀번호를 입력하세요');
+      if(current === null) return;
+      const next = prompt('새 비밀번호를 입력하세요');
+      if(next === null || next.trim() === '') return;
+      toast('비밀번호가 변경되었습니다');
+    });
+
+    on('change-photo-btn', 'click', ()=> document.getElementById('avatar-input').click());
+    on('avatar-input', 'change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      fileToDataUrl(file, async (url)=>{
+        state.profile.avatar = url;
+        applyAvatar();
+        toast('프로필 사진이 변경되었습니다');
+        // ⚠️ 지금은 이미지를 base64 문자열 그대로 profiles.avatar_url에 저장한다.
+        // 실제 서비스라면 Supabase Storage에 파일을 올리고 그 URL만 저장하는
+        // 편이 낫다 (다음 개선 과제로 남겨둠).
+        const { error } = await window.supabaseClient
+          .from('profiles')
+          .update({ avatar_url: url })
+          .eq('id', user.id);
+        if (error) toast('프로필 사진 저장에 실패했습니다');
+      });
+    });
+
+    renderMyPage();
+  })();
 }

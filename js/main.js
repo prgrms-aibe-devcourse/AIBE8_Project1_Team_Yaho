@@ -288,27 +288,38 @@ import { getPopularRegions } from './popArea.js';
     } catch (e) { return 0; }
   }
 
-  function getJournalCount() {
+  // 여행 수첩(앨범 기록) 개수는 이제 Supabase에서 가져온다 (albums -> album_entries).
+  // index.html은 app.js를 로드하지 않아서 여기서 직접 supabaseClient를 사용한다.
+  async function getJournalCount() {
+    const user = window.getCurrentUser ? window.getCurrentUser() : null;
+    if (!user) return 0;
     try {
-      const s = JSON.parse(localStorage.getItem('travelDiaryState_v1') || 'null');
-      if (!s || !Array.isArray(s.albums)) return 0;
-      return s.albums.reduce((sum, a) => sum + (a.entries ? a.entries.length : 0), 0);
+      const { data, error } = await window.supabaseClient
+        .from('albums')
+        .select('album_entries(id)')
+        .eq('user_id', user.id);
+      if (error || !data) return 0;
+      return data.reduce((sum, a) => sum + (a.album_entries ? a.album_entries.length : 0), 0);
     } catch (e) { return 0; }
   }
 
-  function renderMyRecord() {
+  async function renderMyRecord() {
     if (!el.myRecord) return;
     if (window.isLoggedIn()) {
+      const [bookmarkCount, journalCount] = await Promise.all([
+        getBookmarkCount(),
+        getJournalCount(),
+      ]);
       el.myRecord.innerHTML = `
         <ul>
           <li class="my-record__row">
             <svg class="ico"><use href="#i-bookmark"/></svg>
             <span>북마크 </span>
-            <strong class="stat__value">${getBookmarkCount()}개</strong>
+            <strong class="stat__value">${bookmarkCount}개</strong>
           </li>
           <li class="my-record__row">
             <svg class="ico"><use href="#i-notebook"/></svg>
-            <span>여행 수첩 </span><strong class="stat__value">${getJournalCount()}개</strong>
+            <span>여행 수첩 </span><strong class="stat__value">${journalCount}개</strong>
           </li>
         </ul>
         <button class="my-record__btn" type="button" id="btnRecordView">기록 보러가기</button>`;
