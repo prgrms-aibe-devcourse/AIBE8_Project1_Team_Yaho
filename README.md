@@ -63,8 +63,8 @@
 
 <div align="center">
 
-<!-- 아키텍처 다이어그램 자리 -->
-<!-- ![architecture](./images/architecture.png) -->
+![architecture](./images/architecture.png)
+
 
 </div>
 
