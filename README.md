@@ -20,12 +20,13 @@
 ## 📌 목차
 
 - [소개](#-소개)
+- [팀원 소개](#-팀원-소개)
 - [주요 기능](#-주요-기능)
 - [기술 스택](#️-기술-스택)
 - [아키텍처](#-아키텍처)
 - [폴더 구조](#-폴더-구조)
 - [시작하기](#-시작하기)
-- [팀원 소개](#-팀원-소개)
+
 
 ---
 
@@ -36,6 +37,16 @@
 **Supabase**를 통해 로그인, 북마크, 여행 앨범(다이어리) 기능을 지원합니다.
 
 빌드 도구나 프론트엔드 프레임워크 없이 **HTML + CSS + Vanilla JavaScript** 만으로 구현되었습니다.
+
+## 👥 팀원 소개
+
+<div align="center">
+
+| <img src="https://github.com/pgw2001.png" width="100" /> | <img src="https://github.com/Luvys99.png" width="100" /> | <img src="https://github.com/moonishweb-source.png" width="100" /> |
+| :---: | :---: | :---: |
+| [pgw2001](https://github.com/pgw2001) | [Luvys99](https://github.com/Luvys99) | [moonishweb-source](https://github.com/moonishweb-source) |
+
+</div>
 
 ## ✨ 주요 기능
 
@@ -127,16 +138,6 @@ python3 -m http.server 8777
 Supabase 및 TourAPI 관련 민감한 키(서비스키 등)는 코드에 직접 포함되지 않고,
 Supabase Edge Function(`supabase/functions`)의 secret으로 관리됩니다.
 공개되어도 안전한 `SUPABASE_ANON_KEY`만 `js/config.js`에 포함되어 있습니다.
-
-## 👥 팀원 소개
-
-<div align="center">
-
-| <img src="https://github.com/pgw2001.png" width="100" /> | <img src="https://github.com/Luvys99.png" width="100" /> | <img src="https://github.com/moonishweb-source.png" width="100" /> |
-| :---: | :---: | :---: |
-| [pgw2001](https://github.com/pgw2001) | [Luvys99](https://github.com/Luvys99) | [moonishweb-source](https://github.com/moonishweb-source) |
-
-</div>
 
 ---
 
