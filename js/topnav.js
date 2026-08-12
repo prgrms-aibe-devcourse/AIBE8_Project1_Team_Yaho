@@ -47,8 +47,8 @@ const Topnav = {
   MENU_ITEMS: [
     { icon: 'i-home',     label: '여행 지도', href: 'index.html',    match: ['index.html', ''] },
     { icon: 'i-sparkles', label: '여행 정보', href: 'postList.html', match: ['postList.html', 'detail.html'] },
-    { icon: 'i-notebook', label: '여행 수첩', href: 'album.html',    match: ['album.html', 'album-detail.html', 'album-edit.html'] },
-    { icon: 'i-user',     label: '마이페이지', href: 'mypage.html',  match: ['mypage.html'] },
+    { icon: 'i-notebook', label: '여행 수첩', href: 'album.html',    match: ['album.html', 'album-detail.html', 'album-edit.html'], requiresAuth: true },
+    { icon: 'i-user',     label: '마이페이지', href: 'mypage.html',  match: ['mypage.html'], requiresAuth: true },
   ],
 
   // 지금 열려있는 파일명만 뽑아냄 (예: '/app/mypage.html' -> 'mypage.html')
@@ -64,6 +64,7 @@ const Topnav = {
       return '<li>' +
         '<a class="gnb__item' + (isActive ? ' is-active' : '') + '"' +
           ' href="' + item.href + '"' +
+          (item.requiresAuth ? ' data-requires-auth="1"' : '') +
           (isActive ? ' aria-current="page"' : '') + '>' +
           '<svg class="ico"><use href="#' + item.icon + '"/></svg>' + item.label +
         '</a>' +
@@ -146,6 +147,28 @@ const Topnav = {
     `;
 
     this.wireLoginButton();
+    this.wireAuthGuardedLinks();
+  },
+
+  // 비로그인 상태에서 여행 수첩/마이페이지를 누르면, 그 페이지로 갔다가
+  // app.js의 가드에 의해 다시 login.html로 튕기는 "깜빡임"이 생긴다.
+  // 여기서 먼저 로그인 여부를 확인해서, 필요하면 클릭 즉시 login.html로 보낸다.
+  wireAuthGuardedLinks() {
+    const links = document.querySelectorAll('.gnb__item[data-requires-auth]');
+    links.forEach((link) => {
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const target = link.getAttribute('href');
+        await window.authReady();
+        if (window.isLoggedIn()) {
+          location.href = target;
+          return;
+        }
+        try { sessionStorage.setItem('postLoginRedirect', target); }
+        catch (err) { /* 저장 실패해도 로그인 이동 자체는 진행 */ }
+        location.href = 'login.html';
+      });
+    });
   },
 
   /* ---------------- 로그인 상태 ----------------
@@ -181,9 +204,9 @@ const Topnav = {
 
     btn.addEventListener('click', async () => {
       if (this.isLoggedIn()) {
-        // 로그아웃: 페이지 이동 없이 바로 상태만 변경
+        // 로그아웃: 메인페이지로 이동
         await this.logout();
-        this.showToast('로그아웃 되었습니다');
+        location.href = 'index.html';
       } else {
         // 로그인 하러 이동. 로그인 성공 후 지금 페이지로 되돌아오도록 주소를 저장해둔다.
         try { sessionStorage.setItem('postLoginRedirect', location.href); }
