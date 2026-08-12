@@ -232,6 +232,10 @@ const roundToTenThousand = (n) => Math.round(n / 10000) * 10000;
 const SIDO_API_ALIASES = { 29: '12', 46: '12', 45: '52' };
 const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도' };
 
+/* 위 별칭의 역방향 — postList.html?area=로 넘겨줄 지도 기준 시/도 id를 되돌린다.
+   '12'(광주·전남 병합)는 되돌릴 단일 지역이 없어 링크를 만들지 않는다(REGION_HREF_NONE 참고) */
+const SIDO_API_ALIASES_REVERSE = { 52: '45' };
+
 /* scope: 'all' | 'sido' | 'domestic' | 'foreign'
    - all/domestic/foreign: 시/군/구 랭킹 (touDivCd 필터만 다름 — 1:현지인 2:외지인 3:외국인)
    - sido: sidoCode 없으면 광역자치단체 랭킹, 있으면 그 시/도 안 시/군/구 랭킹
@@ -303,6 +307,20 @@ function initPopAreaPage() {
     el.pagination.innerHTML = html;
   }
 
+  /* 랭킹 한 줄을 눌렀을 때 이동할 여행 정보 페이지(postList.html) 주소.
+     - 시/군/구 랭킹(전체/내국인/외국인, 또는 광역자치단체 드릴다운 후): area=시도id&sigungu=시군구코드
+     - 광역자치단체 랭킹(드릴다운 전): area=시도id
+     - '12'(광주·전남 병합) 행은 되돌릴 단일 시/도가 없어 링크를 만들지 않음 */
+  function regionHref(r) {
+    if (state.scope === 'sido' && !state.sidoCode) {
+      if (r.code === '12') return null;
+      const area = SIDO_API_ALIASES_REVERSE[r.code] || r.code;
+      return `postList.html?area=${area}`;
+    }
+    const area = r.code.slice(0, 2);
+    return `postList.html?area=${area}&sigungu=${r.code}`;
+  }
+
   function renderList() {
     const total = state.ranking.length;
     if (!total) {
@@ -318,9 +336,10 @@ function initPopAreaPage() {
     el.list.innerHTML = state.ranking.slice(start, start + PAGE_SIZE).map((r, i) => {
       const rank = start + i + 1;
       const medal = rank === 1 ? ' is-gold' : rank === 2 ? ' is-silver' : rank === 3 ? ' is-bronze' : '';
+      const href = regionHref(r);
       return `
         <li>
-          <a class="popular__btn popular__btn--page" href="#">
+          <a class="popular__btn popular__btn--page" href="${href || '#'}"${href ? '' : ' aria-disabled="true"'}>
             <span class="popular__rank popular__rank--page${medal}">${rank}</span>
             <span class="popular__body">
               <span class="popular__name">${r.name}</span>
