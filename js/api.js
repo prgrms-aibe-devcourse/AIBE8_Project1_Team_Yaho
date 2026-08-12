@@ -6,7 +6,13 @@
 const TourAPI = ( () => {
 
     // End Point
-    const BASE = 'https://apis.data.go.kr/B551011/KorService2';
+    // 예전에는 TourAPI(KorService2)를 브라우저에서 직접 호출했지만, 그러려면
+    // serviceKey를 클라이언트 코드에 그대로 넣어야 해서 GitHub Pages처럼 정적으로
+    // 배포하면 그 키가 그대로 노출된다. 그래서 진짜 키는 Supabase Edge Function
+    // (supabase/functions/korservice-proxy) 안에만 두고, 브라우저는 이 프록시
+    // 주소만 호출한다 — serviceKey 없이 endpoint 파라미터만 넘기면 Edge Function이
+    // 서버 쪽에서 진짜 키를 붙여 TourAPI로 대신 요청해준다.
+    const BASE = `${CONFIG.SUPABASE_URL}/functions/v1/korservice-proxy`;
 
     // 컨텐츠 타입 코드 객체에 저장
     const CONTENT_TYPE = {
@@ -45,9 +51,11 @@ const TourAPI = ( () => {
     // endpoint : API의 세부경로
     // params : url 뒤에 추가로 붙일 파라메타들 { numofRows : 10, pageNo : 1 등등 }
     function buildUrl(endpoint, params) {
-      // API 사용 문서에 나와 있는 url 대로 조합
-        let url = `${BASE}/${endpoint}` +
-        `?serviceKey=${CONFIG.SERVICE_KEY}` +
+      // serviceKey는 이제 안 붙인다 — Edge Function(korservice-proxy)이 서버 쪽에서
+      // 진짜 키를 붙여준다. endpoint는 경로가 아니라 쿼리 파라미터로 넘긴다
+      // (Edge Function 하나가 ?endpoint=areaBasedList2 같은 식으로 여러 세부
+      // 경로를 대신 처리해주는 구조라서).
+        let url = `${BASE}?endpoint=${endpoint}` +
         `&MobileOS=ETC&MobileApp=test&_type=json`;
 
         //params 객체를 [key, value] 쌍으로 순회

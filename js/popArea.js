@@ -8,10 +8,14 @@
    - 주간 합계도 localStorage에 캐시하고 주(일요일)가 바뀔 때만 재호출 —
      사이드바 상위 4개든 전체보기 페이지 랭킹이든 이 캐시 하나로 다 계산한다.
    ============================================================ */
-const baseUrl = "https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList";
+// 예전에는 TourAPI 데이터랩을 브라우저에서 직접 호출했지만, 그러려면 빅데이터
+// 서비스키를 클라이언트 코드에 그대로 넣어야 해서 GitHub Pages처럼 정적으로
+// 배포하면 그 키가 노출된다. 그래서 진짜 키는 Supabase Edge Function
+// (supabase/functions/datalab-proxy) 안에만 두고, 여기서는 그 프록시 주소만 부른다.
+const baseUrl = `${CONFIG.SUPABASE_URL}/functions/v1/datalab-proxy`;
 
 /* 지도 SVG(images/map-korea.svg)에 그려진 시/도 id 17개 — REGIONS를 대체 (map.js와 동일) */
-const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','46','47','48','50','51','52'];
+const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','45','46','47','48','50','51'];
 
 let bjdCodes = null;
 const bjdCodesReady = fetch('data/bjd-codes.json')
@@ -61,10 +65,11 @@ const dayOfWeek = (ymd) =>
 const sundayOfWeek = (ymd) => addDaysYmd(ymd, -dayOfWeek(ymd));
 
 async function fetchVisitorPage(startYmd, endYmd, pageNo, numOfRows) {
+  // serviceKey는 이제 안 넣는다 — Edge Function(datalab-proxy)이 서버 쪽에서
+  // 진짜 빅데이터 키를 붙여준다.
   const queryParams = {
     MobileOS: "ETC",
     MobileApp: "project1",
-    serviceKey: decodeURIComponent(CONFIG.TOURAPI_BIGDATA_KEY), // CONFIG는 config.js에서 가져온 전역 객체
     startYmd,
     endYmd,
     pageNo,
@@ -179,8 +184,10 @@ function aggregateByCodeAndType(items) {
 /* 이번 주(일~토)의 (시/군/구 × 관광객유형) 합계 — 사이드바 상위 4개, 전체보기
    페이지의 전체/광역자치단체/내국인/외국인 랭킹이 전부 이 결과 하나를 공유한다 */
 export async function getWeeklyTotals() {
-  if (typeof CONFIG === 'undefined' || !CONFIG.TOURAPI_BIGDATA_KEY) {
-    console.error('CONFIG.TOURAPI_BIGDATA_KEY가 없어 인기 지역을 불러오지 못했어요');
+  // 빅데이터 서비스키는 이제 클라이언트(config.js)에 없다 — Edge Function
+  // (datalab-proxy)이 서버 쪽에서 갖고 있으므로, 여기서는 SUPABASE_URL만 있으면 됨
+  if (typeof CONFIG === 'undefined' || !CONFIG.SUPABASE_URL) {
+    console.error('CONFIG.SUPABASE_URL이 없어 인기 지역을 불러오지 못했어요');
     return [];
   }
 
@@ -219,9 +226,10 @@ function sumByGroup(totals, { touDivCds, sidoCode, groupBy }) {
 const roundToTenThousand = (n) => Math.round(n / 10000) * 10000;
 
 /* 이 API의 시/도 코드는 법정동코드 기준 시/도 id와 완전히 같지 않음 — 실측해보니
-   광주·전남은 "12" 하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로
-   필터링/표시하려면 이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
-const SIDO_API_ALIASES = { 29: '12', 46: '12' };
+   전북은 개편 전 코드(45) 대신 전북특별자치도 코드(52)로 오고, 광주·전남은 "12"
+   하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로 필터링/표시하려면
+   이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
+const SIDO_API_ALIASES = { 29: '12', 46: '12', 45: '52' };
 const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도' };
 
 /* scope: 'all' | 'sido' | 'domestic' | 'foreign'
