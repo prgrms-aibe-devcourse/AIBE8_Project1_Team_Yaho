@@ -22,6 +22,10 @@ const bjdCodesReady = fetch('data/bjd-codes.json')
 /* v2: totalCount>0만으로 최신일자 판단하던 v1 캐시에 API가 데이터 없는 날에도
    가장 가까운 과거 데이터를 돌려준 탓에 오늘 날짜가 잘못 저장되는 문제가 있어
    키를 올려 기존 캐시를 무시하도록 함 */
+/* 예전에는 localStorage(브라우저별)에 저장했지만, 이제는 Supabase api_cache
+   테이블(js/apiCache.js)에 저장해서 다른 사람 브라우저가 이미 계산해둔 결과도
+   같이 재사용한다. 신선도 판단은 아래 값 안의 checkedYmd/weekKey로 직접 하므로
+   ApiCache.get()에는 ttlMs를 넘기지 않는다. */
 const LATEST_DATE_KEY = 'wtg:tourApiLatestYmd:v2';
 const WEEKLY_TOTALS_KEY = 'wtg:weeklyTotals:v1';
 
@@ -129,7 +133,7 @@ async function getLatestAvailableYmd() {
   const today = getKoreanYmdDaysAgo(0);
 
   let cached = null;
-  try { cached = JSON.parse(localStorage.getItem(LATEST_DATE_KEY) || 'null'); } catch { /* 캐시 손상 시 무시 */ }
+  try { cached = await window.ApiCache.get(LATEST_DATE_KEY); } catch { /* 캐시 손상 시 무시 */ }
   if (cached && cached.checkedYmd === today) return cached.latestYmd;
 
   let latest = cached ? cached.latestYmd : null;
@@ -145,7 +149,7 @@ async function getLatestAvailableYmd() {
     }
   }
 
-  localStorage.setItem(LATEST_DATE_KEY, JSON.stringify({ latestYmd: latest, checkedYmd: today }));
+  await window.ApiCache.set(LATEST_DATE_KEY, { latestYmd: latest, checkedYmd: today });
   return latest;
 }
 
@@ -183,7 +187,7 @@ export async function getWeeklyTotals() {
   const weekKey = sundayOfWeek(getKoreanYmdDaysAgo(0));
 
   try {
-    const cached = JSON.parse(localStorage.getItem(WEEKLY_TOTALS_KEY) || 'null');
+    const cached = await window.ApiCache.get(WEEKLY_TOTALS_KEY);
     if (cached && cached.weekKey === weekKey) return cached.totals;
   } catch { /* 캐시 손상 시 무시하고 새로 계산 */ }
 
@@ -194,7 +198,7 @@ export async function getWeeklyTotals() {
   const items = await fetchVisitorRange(start, end);
   const totals = aggregateByCodeAndType(items);
 
-  localStorage.setItem(WEEKLY_TOTALS_KEY, JSON.stringify({ weekKey, totals }));
+  await window.ApiCache.set(WEEKLY_TOTALS_KEY, { weekKey, totals });
   return totals;
 }
 

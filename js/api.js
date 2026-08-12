@@ -14,24 +14,27 @@ const TourAPI = ( () => {
         FESTIVAL : 15, // 축제/공연/행사
     };
     
-    // sesstionStorage 기반 캐시 ( sesstionStorage : 브라우저가 기본으로 제공하는 저장 공간(전역 객체) )
-    // 같은 URL은 세션 동안 재호출하지 않도록 ( 일 1000회건 초과를 방지하기 위함 )
+    // Supabase api_cache 테이블 기반 공유 캐시 (js/apiCache.js)
+    // 같은 URL은 CACHE_TTL_MS 동안 재호출하지 않도록 ( 일 1000회건 초과를 방지하기 위함 )
+    // 예전에는 sessionStorage(브라우저 세션 한정)를 썼지만, 이제는 Supabase에
+    // 저장해서 다른 사람 브라우저에서 이미 호출한 결과도 같이 재사용한다.
+
+    const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 1일
 
     // try catch 구조를 사용한 이유는 성능 향상을 위한 기능이기 때문에 에러가 났을 때 성능을 포기하고 그냥 무시하게끔 동작시키기 위함
-    // key = 완성된 API 요청 URL을 받아서 Stoarage에서 저장된 값이 있으면 꺼내오기 없으면 null
-    function cacheGet(key){
+    // key = 완성된 API 요청 URL을 받아서 캐시에 저장된 값이 있으면 꺼내오기 없으면 null
+    async function cacheGet(key){
         try{
-            const raw = sessionStorage.getItem('tourapi:' + key); // Storage에서 꺼내오기 
-            return raw ? JSON.parse(raw) : null; // raw가 존재하면 캐시 히트로 문자열을 배열 + 객체로 변환해줌, raw가 없으면 null
+            return await window.ApiCache.get('tourapi:' + key, CACHE_TTL_MS);
         }catch (e) {
-            return null; //getItem 함수가 에러 나면 캐시 포기하고 null
+            return null; // 캐시 조회 실패하면 캐시 포기하고 null
         }
     }
 
-    // key 
-    function cacheSet(key, value){
+    // key
+    async function cacheSet(key, value){
         try{
-            sessionStorage.setItem('tourapi:' + key, JSON.stringify(value)); // Storage에 저장하기 ( 배열 + 객체 -> 문자열로 변환)
+            await window.ApiCache.set('tourapi:' + key, value);
         }catch (e) {
             // 저장 실패 ( 무시 )
         }
@@ -62,8 +65,8 @@ const TourAPI = ( () => {
     async function callApi(endpoint, params) {
         const url = buildUrl(endpoint, params);
 
-        // sessionStorage에서 url을 키로 캐시된 데이터가 존재하는지 체크, 존재하면 반환 ( 재요청 방지 )
-        const cached = cacheGet(url);
+        // 공유 캐시에서 url을 키로 캐시된 데이터가 존재하는지 체크, 존재하면 반환 ( 재요청 방지 )
+        const cached = await cacheGet(url);
         if (cached) return cached;
 
         // 캐시된 url이 없다면 url로 API 요청
@@ -99,7 +102,7 @@ const TourAPI = ( () => {
         items = Array.isArray(items) ? items : [items]; // items이 배열이 아니라면 객체를 배열에 넣어서 배열로 형태로 변환시킴
 
         // url을 키로  items를 캐시에 저장
-        cacheSet(url, items);
+        await cacheSet(url, items);
 
         // items( 정규화된 배열 )를 반환함
         return items;

@@ -134,21 +134,17 @@ import { getPopularRegions } from './popArea.js';
 
   /* --- "이런 여행지 어때요?" 그리드 (좌측) — TourAPI 분류체계(lclsSystm1) 기준, 카테고리별 5페이지 --- */
 
-  /* 호출 결과 localStorage 캐시 (카테고리+페이지 단위, 1일 TTL) — 페이지/카테고리를
-     오갈 때마다 매번 API를 다시 부르지 않도록 함 */
+  /* 호출 결과 공유 캐시 (Supabase api_cache, 카테고리+페이지 단위, 1일 TTL) —
+     페이지/카테고리를 오갈 때마다 매번 API를 다시 부르지 않도록 함.
+     예전에는 localStorage(브라우저별)를 썼지만, 이제는 다른 사람이 이미
+     불러온 결과도 같이 재사용할 수 있도록 Supabase에 저장한다. */
   /* v2: contentTypeId 고정을 풀어 결과가 달라져 기존 v1 캐시를 무효화 */
   const spotCacheKey = (category, page) => `wtg:spotGrid:v2:${category}:${page}`;
-  function getSpotCache(category, page) {
-    try {
-      const cached = JSON.parse(localStorage.getItem(spotCacheKey(category, page)) || 'null');
-      if (!cached || Date.now() - cached.ts > SPOT_CACHE_TTL_MS) return null;
-      return cached.items;
-    } catch { return null; }
+  async function getSpotCache(category, page) {
+    return window.ApiCache.get(spotCacheKey(category, page), SPOT_CACHE_TTL_MS);
   }
-  function setSpotCache(category, page, items) {
-    try {
-      localStorage.setItem(spotCacheKey(category, page), JSON.stringify({ items, ts: Date.now() }));
-    } catch { /* 저장 실패(용량 초과 등) 무시 */ }
+  async function setSpotCache(category, page, items) {
+    await window.ApiCache.set(spotCacheKey(category, page), items);
   }
 
   function renderSpotPager() {
@@ -179,7 +175,7 @@ import { getPopularRegions } from './popArea.js';
     renderSpotPager();
 
     const reqId = ++spotGridReqId;
-    const cached = getSpotCache(category, page);
+    const cached = await getSpotCache(category, page);
     if (cached) { renderSpotItems(cached); return; }
 
     el.spotGrid.innerHTML = `<li class="spot-grid__empty">불러오는 중…</li>`;
@@ -193,7 +189,7 @@ import { getPopularRegions } from './popArea.js';
         contentTypeId: null,
       });
       if (reqId !== spotGridReqId) return; /* 응답 오는 사이 다른 카테고리/페이지가 선택됨 */
-      setSpotCache(category, page, items);
+      await setSpotCache(category, page, items);
       renderSpotItems(items);
     } catch (err) {
       console.error('여행지 목록 로드 실패:', err);
