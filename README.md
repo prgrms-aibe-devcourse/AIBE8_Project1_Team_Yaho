@@ -132,9 +132,9 @@ Supabase Edge Function(`supabase/functions`)의 secret으로 관리됩니다.
 
 <div align="center">
 
-| <img src="https://github.com/pgw2001.png" width="100" /> | <img src="https://github.com/Luvys99.png" width="100" /> | <img src="https://github.com/mineboy123.png" width="100" /> | <img src="https://github.com/moonishweb-source.png" width="100" /> |
-| :---: | :---: | :---: | :---: |
-| [pgw2001](https://github.com/pgw2001) | [Luvys99](https://github.com/Luvys99) | [mineboy123](https://github.com/mineboy123) | [moonishweb-source](https://github.com/moonishweb-source) |
+| <img src="https://github.com/pgw2001.png" width="100" /> | <img src="https://github.com/Luvys99.png" width="100" /> | <img src="https://github.com/moonishweb-source.png" width="100" /> |
+| :---: | :---: | :---: |
+| [pgw2001](https://github.com/pgw2001) | [Luvys99](https://github.com/Luvys99) | [moonishweb-source](https://github.com/moonishweb-source) |
 
 </div>
 
