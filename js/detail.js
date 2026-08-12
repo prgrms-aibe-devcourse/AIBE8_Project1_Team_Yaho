@@ -13,45 +13,45 @@
   var FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1200&h=700&fit=crop&auto=format';
 
   // ── 북마크(저장) ─────────────────────────────────────────────────────
-  // bookmark.html의 bookmark.js와 localStorage 키를 공유해서, 여기서 저장한
-  // {id, image, link}가 북마크 페이지의 그리드에 그대로 뜨도록 합니다.
-  var BOOKMARK_KEY = 'travelBookmarks_v1';
+  // bookmark.html의 bookmark.js와 Supabase의 bookmarks 테이블을 함께 쓰기
+  // 때문에, 여기서 저장한 게 북마크 페이지의 그리드에 그대로 뜨도록 컬럼명이
+  // 같습니다 (content_id/name/image/link).
+  var bookmarked = false; // 지금 이 콘텐츠가 북마크돼 있는지 (캐시)
 
-  function getBookmarks() {
-    try {
-      var raw = localStorage.getItem(BOOKMARK_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
+  // 이 콘텐츠가 지금 북마크돼 있는지 Supabase에서 미리 물어봐둔다
+  // (아래 renderDetail의 저장 버튼이 그려질 때 함께 반영됨).
+  function refreshBookmarkState() {
+    var user = window.getCurrentUser ? window.getCurrentUser() : null;
+    if (!user) { bookmarked = false; return Promise.resolve(); }
+    return window.supabaseClient
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('content_id', contentId)
+      .maybeSingle()
+      .then(function (res) { bookmarked = !!res.data; });
   }
-
-  function setBookmarks(list) {
-    try {
-      localStorage.setItem(BOOKMARK_KEY, JSON.stringify(list));
-    } catch (e) {
-      // 저장 실패(용량 초과 등)는 무시
-    }
-  }
-
-  function isBookmarked(id) {
-    return getBookmarks().some(function (b) { return String(b.id) === String(id); });
-  }
+  var bookmarkStatePromise = refreshBookmarkState();
 
   // 이미 저장돼 있으면 제거, 아니면 추가 (토글). 반환값 = 토글 후 저장 여부
-  function toggleBookmark(id, image, link, name) {
-    var list = getBookmarks();
-    var idx = -1;
-    for (var i = 0; i < list.length; i++) {
-      if (String(list[i].id) === String(id)) { idx = i; break; }
-    }
-    if (idx > -1) {
-      list.splice(idx, 1);
-      setBookmarks(list);
+  // (실패하면 null. 로그인 안 된 상태에서는 호출하지 않는다 — save 버튼 클릭 핸들러에서 미리 막음)
+  async function toggleBookmark(image, link, name) {
+    var user = window.getCurrentUser();
+    if (bookmarked) {
+      var del = await window.supabaseClient
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('content_id', contentId);
+      if (del.error) return null;
+      bookmarked = false;
       return false;
     }
-    list.unshift({ id: id, image: image, link: link, name: name });
-    setBookmarks(list);
+    var ins = await window.supabaseClient
+      .from('bookmarks')
+      .insert({ user_id: user.id, content_id: contentId, image: image, link: link, name: name });
+    if (ins.error) return null;
+    bookmarked = true;
     return true;
   }
 
@@ -424,12 +424,19 @@
     var saveBtn = document.getElementById('save-bookmark-btn');
     if (saveBtn) {
       var refreshSaveBtnLabel = function () {
-        saveBtn.textContent = isBookmarked(contentId) ? '🔖 저장됨' : '🔖 저장';
+        saveBtn.textContent = bookmarked ? '🔖 저장됨' : '🔖 저장';
       };
       refreshSaveBtnLabel();
+      // 위에서 미리 시작해둔 조회가 끝나면 실제 상태로 라벨을 다시 맞춘다
+      bookmarkStatePromise.then(refreshSaveBtnLabel);
 
-      saveBtn.addEventListener('click', function () {
-        var nowSaved = toggleBookmark(contentId, heroImage, buildSelfLink(), common.title);
+      saveBtn.addEventListener('click', async function () {
+        if (!window.isLoggedIn || !window.isLoggedIn()) {
+          showToast('로그인이 필요합니다');
+          return;
+        }
+        var nowSaved = await toggleBookmark(heroImage, buildSelfLink(), common.title);
+        if (nowSaved === null) { showToast('처리에 실패했습니다'); return; }
         refreshSaveBtnLabel();
         showToast(nowSaved ? '북마크에 저장했습니다' : '북마크에서 제거했습니다');
       });

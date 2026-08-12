@@ -281,10 +281,17 @@ import { getPopularRegions } from './popArea.js';
      로그인 여부는 js/authState.js가 Supabase 세션을 보고 판단해준다
      (window.isLoggedIn()). */
 
-  function getBookmarkCount() {
+  // 북마크 개수도 Supabase의 bookmarks 테이블에서 가져온다.
+  async function getBookmarkCount() {
+    const user = window.getCurrentUser ? window.getCurrentUser() : null;
+    if (!user) return 0;
     try {
-      const list = JSON.parse(localStorage.getItem('travelBookmarks_v1') || '[]');
-      return Array.isArray(list) ? list.length : 0;
+      const { count, error } = await window.supabaseClient
+        .from('bookmarks')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (error) return 0;
+      return count || 0;
     } catch (e) { return 0; }
   }
 

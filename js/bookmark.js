@@ -1,11 +1,10 @@
 /* ============================================================
    bookmark.html - 북마크 (대표 사진 그리드)
    --------------------------------------------------------------
-   detail.html의 "🔖 저장" 버튼을 누르면 detail.js가
-   localStorage(BOOKMARK_KEY)에 { id, image, link } 형태로 저장한다.
-   이 파일은 그 목록을 그대로 읽어서 그려주기만 한다.
-   (detail.js와 키 이름이 정확히 같아야 하므로 'travelBookmarks_v1'을
-    임의로 바꾸지 않도록 주의)
+   detail.html의 "🔖 저장" 버튼을 누르면 detail.js가 Supabase의
+   bookmarks 테이블에 { user_id, content_id, image, link, name } 행을
+   추가한다. 이 파일은 로그인한 사용자의 bookmarks 행을 그대로 읽어서
+   그려주기만 한다.
    카드를 클릭하면 저장된 link(=detail.html?id=...&type=...)로 이동하고,
    카드 우상단 ✕ 버튼으로 개별 삭제도 가능하다.
    ============================================================ */
@@ -49,60 +48,67 @@
 })();
 
 if(typeof page !== 'undefined' && page === 'bookmark'){
+  (async function initBookmarkPage(){
+    await window.authReady();
+    const user = window.getCurrentUser();
 
-  const BOOKMARK_KEY = 'travelBookmarks_v1';
-
-  function getBookmarks(){
-    try{
-      const raw = localStorage.getItem(BOOKMARK_KEY);
-      return raw ? JSON.parse(raw) : [];
-    }catch(e){ return []; }
-  }
-
-  function setBookmarks(list){
-    try{ localStorage.setItem(BOOKMARK_KEY, JSON.stringify(list)); }
-    catch(e){ /* 저장 실패는 무시 */ }
-  }
-
-  function removeBookmark(id){
-    setBookmarks(getBookmarks().filter(b => String(b.id) !== String(id)));
-    renderBookmarkGrid(getBookmarks());
-    toast('북마크에서 제거했습니다');
-  }
-
-  function renderBookmarkGrid(items){
-    const grid = document.getElementById('bookmark-grid');
-    const empty = document.getElementById('bookmark-empty');
-    grid.innerHTML = '';
-
-    if(!items.length){
-      empty.hidden = false;
-      return;
+    async function getBookmarks(){
+      if (!user) return []; // 로그인 안 했으면 빈 목록 (이 페이지는 로그인 강제는 아님)
+      const { data, error } = await window.supabaseClient
+        .from('bookmarks')
+        .select('content_id, name, image, link')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data.map(r => ({ id: r.content_id, name: r.name, image: r.image, link: r.link }));
     }
-    empty.hidden = true;
 
-    items.forEach(item=>{
-      const card = document.createElement('a');
-      card.className = 'bookmark-card';
-      card.href = item.link || '#';
-      card.style.position = 'relative';
-      card.innerHTML = `
-        <img src="${item.image}" alt="${item.name || '북마크한 장소'} 사진" loading="lazy">
-        <span class="bookmark-card__name">${item.name || ''}</span>
-        <button type="button" class="bookmark-remove-btn" title="북마크 삭제"
-          style="position:absolute; top:6px; right:6px; width:24px; height:24px;
-                 border-radius:50%; background:rgba(0,0,0,0.55); color:#fff;
-                 font-size:13px; line-height:1; border:none; cursor:pointer;
-                 display:flex; align-items:center; justify-content:center;">✕</button>
-      `;
-      card.querySelector('.bookmark-remove-btn').addEventListener('click', (e)=>{
-        e.preventDefault();   // <a> 이동 막기
-        e.stopPropagation();
-        removeBookmark(item.id);
+    async function removeBookmark(id){
+      if (!user) return;
+      const { error } = await window.supabaseClient
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('content_id', id);
+      if (error) { toast('삭제에 실패했습니다'); return; }
+      renderBookmarkGrid(await getBookmarks());
+      toast('북마크에서 제거했습니다');
+    }
+
+    function renderBookmarkGrid(items){
+      const grid = document.getElementById('bookmark-grid');
+      const empty = document.getElementById('bookmark-empty');
+      grid.innerHTML = '';
+
+      if(!items.length){
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+
+      items.forEach(item=>{
+        const card = document.createElement('a');
+        card.className = 'bookmark-card';
+        card.href = item.link || '#';
+        card.style.position = 'relative';
+        card.innerHTML = `
+          <img src="${item.image}" alt="${item.name || '북마크한 장소'} 사진" loading="lazy">
+          <span class="bookmark-card__name">${item.name || ''}</span>
+          <button type="button" class="bookmark-remove-btn" title="북마크 삭제"
+            style="position:absolute; top:6px; right:6px; width:24px; height:24px;
+                   border-radius:50%; background:rgba(0,0,0,0.55); color:#fff;
+                   font-size:13px; line-height:1; border:none; cursor:pointer;
+                   display:flex; align-items:center; justify-content:center;">✕</button>
+        `;
+        card.querySelector('.bookmark-remove-btn').addEventListener('click', (e)=>{
+          e.preventDefault();   // <a> 이동 막기
+          e.stopPropagation();
+          removeBookmark(item.id);
+        });
+        grid.appendChild(card);
       });
-      grid.appendChild(card);
-    });
-  }
+    }
 
-  renderBookmarkGrid(getBookmarks());
+    renderBookmarkGrid(await getBookmarks());
+  })();
 }

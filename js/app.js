@@ -55,6 +55,9 @@ const page = document.body.dataset.page; // 현재 페이지 이름
 // 이 페이지의 다른 코드(sidebar.js 등)가 먼저 실행될 수 있다. 리다이렉트이
 // 필요한 경우 window.authReady()가 끝난 뒤 location.href로 넘어간다.
 const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edit'];
+// bookmark.html은 로그인 없이도 볼 수 있지만(가드 대상 아님) 사이드바에는
+// 로그인했을 때 프로필을 보여줘야 하므로, 데이터 로딩 대상에는 포함한다.
+const PAGES_NEEDING_PROFILE_DATA = LOGIN_REQUIRED_PAGES.concat(['bookmark']);
 
 (async function guardLoginRequiredPages(){
   if (LOGIN_REQUIRED_PAGES.indexOf(page) === -1) return;
@@ -80,7 +83,7 @@ const LOGIN_REQUIRED_PAGES = ['mypage', 'album-list', 'album-detail', 'album-edi
    로그인/앨범 데이터가 필요 없는 페이지(login, register 등)에서는
    아무것도 불러오지 않고 곧바로 ready 처리한다.
    ============================================================ */
-let state = { profile: { name: '', email: '', avatar: null }, albums: [] };
+let state = { profile: { name: '여행자', email: '', avatar: null }, albums: [] };
 
 let resolveDataReady;
 const dataReadyPromise = new Promise((resolve) => { resolveDataReady = resolve; });
@@ -103,7 +106,9 @@ function mapAlbumRow(row){
 
 async function loadState(){
   const user = window.getCurrentUser();
-  if (!user) { resolveDataReady(); return; } // 비로그인이면 위 가드가 곧 로그인 페이지로 보낸다
+  // 비로그인이면(예: bookmark.html은 로그인 없이도 볼 수 있음) 기본 프로필을
+  // 그대로 두고 끝낸다. mypage/album 계열은 위 가드가 곧 로그인 페이지로 보낸다.
+  if (!user) { resolveDataReady(); return; }
 
   const [{ data: profileRow }, { data: albumRows, error: albumsError }] = await Promise.all([
     window.supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle(),
@@ -128,7 +133,7 @@ async function loadState(){
 }
 
 (async function initData(){
-  if (LOGIN_REQUIRED_PAGES.indexOf(page) === -1) { resolveDataReady(); return; }
+  if (PAGES_NEEDING_PROFILE_DATA.indexOf(page) === -1) { resolveDataReady(); return; }
   await window.authReady();
   await loadState();
 })();
