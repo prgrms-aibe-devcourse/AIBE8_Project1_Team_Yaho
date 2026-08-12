@@ -230,7 +230,8 @@ const roundToTenThousand = (n) => Math.round(n / 10000) * 10000;
    하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로 필터링/표시하려면
    이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
 const SIDO_API_ALIASES = { 29: '12', 46: '12', 45: '52' };
-const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도' };
+/* 전북은 bjdCodes.sido에 옛 코드 '45'가 없어(현재는 '52'만 있음) 이름 조회가 실패하므로 별도 보강 */
+const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도', 45: '전북특별자치도' };
 
 /* 위 별칭의 역방향 — postList.html?area=로 넘겨줄 지도 기준 시/도 id를 되돌린다.
    '12'(광주·전남 병합)는 되돌릴 단일 지역이 없어 링크를 만들지 않는다(REGION_HREF_NONE 참고) */
@@ -307,6 +308,17 @@ function initPopAreaPage() {
     el.pagination.innerHTML = html;
   }
 
+  /* 구가 여러 개인 시(수원시 장안구/권선구/…)는 TourAPI에 "시" 자체 코드로 등록된
+     여행지가 없어(map.js resolveRegionGroup과 동일한 이유), 그 시의 구 코드를 전부
+     모아서 postList.html에 넘겨야 실제로 목록이 뜬다. */
+  function resolveRegionGroupIds(code) {
+    if (!bjdCodes) return [code];
+    const name = bjdCodes.sigungu[code] || code;
+    const cityName = name.includes(' ') ? name.split(' ')[0] : name;
+    const memberIds = Object.keys(bjdCodes.sigungu).filter((k) => bjdCodes.sigungu[k].startsWith(`${cityName} `));
+    return memberIds.length ? memberIds : [code];
+  }
+
   /* 랭킹 한 줄을 눌렀을 때 이동할 여행 정보 페이지(postList.html) 주소.
      - 시/군/구 랭킹(전체/내국인/외국인, 또는 광역자치단체 드릴다운 후): area=시도id&sigungu=시군구코드
      - 광역자치단체 랭킹(드릴다운 전): area=시도id
@@ -318,7 +330,8 @@ function initPopAreaPage() {
       return `postList.html?area=${area}`;
     }
     const area = r.code.slice(0, 2);
-    return `postList.html?area=${area}&sigungu=${r.code}`;
+    const members = resolveRegionGroupIds(r.code);
+    return `postList.html?area=${area}&sigungu=${members.join(',')}`;
   }
 
   function renderList() {
