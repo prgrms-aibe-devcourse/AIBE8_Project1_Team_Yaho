@@ -277,11 +277,9 @@ import { getPopularRegions } from './popArea.js';
     );
   }
 
-  /* --- 내 여행 기록 --- */
-  function isLoggedIn() {
-    try { return localStorage.getItem('isLoggedIn') === 'true'; }
-    catch (e) { return false; }
-  }
+  /* --- 내 여행 기록 ---
+     로그인 여부는 js/authState.js가 Supabase 세션을 보고 판단해준다
+     (window.isLoggedIn()). */
 
   function getBookmarkCount() {
     try {
@@ -300,7 +298,7 @@ import { getPopularRegions } from './popArea.js';
 
   function renderMyRecord() {
     if (!el.myRecord) return;
-    if (isLoggedIn()) {
+    if (window.isLoggedIn()) {
       el.myRecord.innerHTML = `
         <ul>
           <li class="my-record__row">
@@ -377,7 +375,7 @@ import { getPopularRegions } from './popArea.js';
     */
 
     /* 헤더 로그인/로그아웃 시 내 여행 기록 갱신 */
-    window.addEventListener('wtg:login-changed', renderMyRecord);
+    window.addEventListener('wtg:auth-changed', renderMyRecord);
 
     /* 내 여행 기록 */
     if (el.myRecord) {

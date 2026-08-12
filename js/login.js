@@ -1,35 +1,33 @@
 /* ============================================================
    login.js — login.html 전용 (로그인 폼 처리)
    --------------------------------------------------------------
-   app.js가 먼저 로드되어 정의해두는 state, saveState, toast, on,
-   getAccounts/saveAccounts/findAccountByEmail 을 그대로 사용합니다.
-   그래서 <script> 순서는 반드시 app.js -> login.js 여야 합니다.
+   Supabase Auth(signInWithPassword)로 로그인합니다.
+   로그인에 성공하면 js/authState.js가 'wtg:auth-changed'를 자동으로
+   발생시켜서 topnav.js의 로그인 버튼 라벨 등이 알아서 갱신됩니다.
+
+   app.js가 먼저 로드되어 정의해두는 toast, on 을 그대로 사용하고,
+   window.supabaseClient(js/supabaseClient.js)도 필요합니다.
+   그래서 <script> 순서는 반드시
+   supabaseClient.js -> authState.js -> app.js -> login.js 여야 합니다.
    ============================================================ */
 if(page === 'login'){
-  on('login-form', 'submit', (e)=>{
+  on('login-form', 'submit', async (e)=>{
     e.preventDefault();
 
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
-    const account = findAccountByEmail(email);
-    if(!account){
-      alert('가입되지 않은 이메일입니다.');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+
+    if (submitBtn) submitBtn.disabled = false;
+
+    if (error) {
+      alert('이메일 또는 비밀번호가 일치하지 않습니다.');
       return;
     }
-    if(account.password !== password){
-      alert('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    // index.html의 헤더(js/topnav.js)가 "로그인/로그아웃" 버튼 라벨을
-    // 판단하는 데 쓰는 공통 플래그. 여기서 로그인 성공 시 켜준다.
-    try{ localStorage.setItem('isLoggedIn', 'true'); }catch(err){ /* 무시 */ }
-
-    // 로그인한 계정 정보를 마이페이지에서 보는 프로필에도 반영해준다.
-    state.profile.name = account.name;
-    state.profile.email = account.email;
-    saveState(state);
 
     toast('로그인 되었습니다');
 

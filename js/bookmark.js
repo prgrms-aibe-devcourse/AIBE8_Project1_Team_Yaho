@@ -24,10 +24,8 @@
   // 외곽선 색으로 아이콘을 채워서 보여준다 (icon-btn.is-on .ico { fill: currentColor })
   btn.classList.add('is-on');
 
-  function isLoggedIn(){
-    try{ return localStorage.getItem('isLoggedIn') === 'true'; }
-    catch(e){ return false; }
-  }
+  // 로그인 여부는 js/authState.js가 Supabase 세션을 보고 판단해준다
+  // (window.isLoggedIn()).
 
   // app.js의 전역 toast()가 없는 페이지(index.html)에서도 동작하도록 자체 구현
   function headerToast(msg){
@@ -45,7 +43,7 @@
   }
 
   btn.addEventListener('click', () => {
-    if(isLoggedIn()) location.href = 'bookmark.html';
+    if(window.isLoggedIn()) location.href = 'bookmark.html';
     else headerToast('로그인이 필요합니다');
   });
 })();

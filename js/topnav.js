@@ -31,11 +31,12 @@
  *    (순서를 바꾸지 말 것)
  *
  * 로그인 상태:
- *    localStorage('isLoggedIn')로 유지되어 새로고침해도 안 풀린다.
+ *    Supabase Auth 세션으로 유지되어 새로고침해도 안 풀린다
+ *    (js/authState.js가 window.isLoggedIn()으로 동기 조회를 제공).
  *    "로그인" 버튼을 누르면 지금 페이지 주소를
  *    sessionStorage('postLoginRedirect')에 저장해두고 login.html로
  *    이동하고, login.html에서 로그인에 성공하면 그 주소로 다시
- *    돌려보내준다 (js/app.js의 로그인 처리 부분 참고).
+ *    돌려보내준다 (js/login.js 참고).
  * ==================================================
  */
 
@@ -147,16 +148,20 @@ const Topnav = {
     this.wireLoginButton();
   },
 
-  /* ---------------- 로그인 상태 ---------------- */
+  /* ---------------- 로그인 상태 ----------------
+     실제 판단은 js/authState.js가 Supabase 세션을 보고 해준다.
+     새로고침 직후 아주 짧은 순간에는 최초 세션 확인이 아직 안 끝나서
+     false(비로그인)로 보일 수 있는데, 확인이 끝나면 authState.js가
+     'wtg:auth-changed'를 발생시켜서 아래 wireLoginButton()이 라벨을
+     다시 그려준다. */
   isLoggedIn() {
-    try { return localStorage.getItem('isLoggedIn') === 'true'; }
-    catch (e) { return false; }
+    return window.isLoggedIn();
   },
 
-  setLoggedIn(value) {
-    try { localStorage.setItem('isLoggedIn', value ? 'true' : 'false'); }
-    catch (e) { /* 저장 실패는 무시 */ }
-    window.dispatchEvent(new CustomEvent('wtg:login-changed'));
+  async logout() {
+    await window.supabaseClient.auth.signOut();
+    // signOut()도 내부적으로 세션을 지우면서 authState.js의
+    // onAuthStateChange -> 'wtg:auth-changed' 를 발생시킨다.
   },
 
   updateLoginButtonLabel() {
@@ -168,14 +173,16 @@ const Topnav = {
   wireLoginButton() {
     this.updateLoginButtonLabel();
 
+    // 로그인/로그아웃/최초 세션 확인 완료 등 상태가 바뀔 때마다 라벨을 다시 그림
+    window.addEventListener('wtg:auth-changed', () => this.updateLoginButtonLabel());
+
     const btn = document.getElementById('btnLogin');
     if (!btn) return;
 
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (this.isLoggedIn()) {
         // 로그아웃: 페이지 이동 없이 바로 상태만 변경
-        this.setLoggedIn(false);
-        this.updateLoginButtonLabel();
+        await this.logout();
         this.showToast('로그아웃 되었습니다');
       } else {
         // 로그인 하러 이동. 로그인 성공 후 지금 페이지로 되돌아오도록 주소를 저장해둔다.
