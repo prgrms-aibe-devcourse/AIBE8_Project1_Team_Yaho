@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디갈까? | 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/login.css">
+<link rel="icon" href="images/favicon.ico" />
+</head>
+<!-- data-page 속성으로 app.js 가 "지금 로그인 페이지구나"를 판별합니다 -->
+<body data-page="login">
+
+<div id="page-login" class="page login-page">
+  <div class="login-card">
+    <h1 class="login-title">로그인</h1>
+    <p class="login-sub">계정정보를 입력해주세요.</p>
+
+    <form id="login-form">
+      <label class="field-label" for="login-email">이메일</label>
+      <input class="text-input" type="email" id="login-email" placeholder="이메일 입력" required>
+
+      <label class="field-label" for="login-password">비밀번호</label>
+      <input class="text-input" type="password" id="login-password" placeholder="비밀번호 입력" required>
+
+      <button type="submit" class="btn-gradient login-btn">Log In</button>
+    </form>
+    <p class="login-hint">아직 계정이 없으신가요? <a href="register.html">회원가입하기</a></p>
+    <p class="login-hint">체험용 데모 계정 · traveler@gmail.com / demo1234</p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabaseClient.js"></script>
+<script src="./js/authState.js"></script>
+<script src="./js/app.js"></script>
+<script src="./js/login.js"></script>
+</body>
+</html>

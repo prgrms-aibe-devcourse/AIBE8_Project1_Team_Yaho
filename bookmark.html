@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디갈까? | 북마크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/reset.css" />
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/style.css" />
+<link rel="stylesheet" href="./css/bookmark.css">
+<link rel="icon" href="images/favicon.ico" />
+</head>
+<body data-page="bookmark">
+
+<div id="page-app" class="page app-page">
+
+  <div id="app-topnav"></div>
+
+  <div class="app-body">
+    <div id="app-sidebar"></div>
+
+    <main class="content">
+      <div class="view-header-row">
+        <div>
+          <h2 class="view-title">북마크</h2>
+          <p class="muted">찜해둔 장소들을 대표 사진으로 모아봤어요</p>
+        </div>
+      </div>
+      <div class="bookmark-grid" id="bookmark-grid"></div>
+      <p class="empty-state" id="bookmark-empty" hidden>아직 북마크한 장소가 없어요.</p>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabaseClient.js"></script>
+<script src="./js/authState.js"></script>
+<script src="./js/app.js"></script>
+<script src="./js/topnav.js"></script>
+<script src="./js/sidebar.js"></script>
+<script src="./js/bookmark.js"></script>
+</body>
+</html>

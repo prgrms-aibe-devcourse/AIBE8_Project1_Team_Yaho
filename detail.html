@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>어디갈까? | 상세보기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/poststyle.css">
+  <link rel="stylesheet" href="css/style.css">  
+  <link rel="stylesheet" href="css/style_mp.css">
+  <link rel="stylesheet" href="css/reset.css">
+</head>
+<body>
+
+  <!--</header> -->
+  <div id="app-topnav"></div>
+
+  <!-- ── Detail content (injected by detail.js) ── -->
+  <main class="detail-main">
+    <div class="container" id="detail-container">
+      <!-- Loading state -->
+      <div style="text-align:center; padding: 80px 0; color: #9ca3af;">
+        <div style="font-size:32px; margin-bottom:12px;">⏳</div>
+        <p>불러오는 중...</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/authState.js"></script>
+  <script src="js/apiCache.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/topnav.js"></script>
+  <script src="js/bookmark.js"></script>
+</body>
+</html>

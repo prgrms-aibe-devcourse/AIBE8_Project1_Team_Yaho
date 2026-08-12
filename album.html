@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디갈까? | 나의 여행 앨범</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/reset.css" />
+<link rel="stylesheet" href="./css/style_mp.css">
+<link rel="stylesheet" href="./css/style.css" />
+<link rel="stylesheet" href="./css/album-list.css">
+<link rel="icon" href="images/favicon.ico" />
+</head>
+<body data-page="album-list">
+
+<div id="page-app" class="page app-page">
+
+  <div id="app-topnav"></div>
+
+  <div class="app-body">
+    <div id="app-sidebar"></div>
+
+    <main class="content">
+      <div class="view-header-row">
+        <div>
+          <h2 class="view-title">나의 여행 앨범</h2>
+          <p class="muted">여행의 소중한 순간들을 다이어리처럼 기록해보세요 · 카드 왼쪽 위 동그라미를 눌러 색상을 바꿀 수 있어요</p>
+        </div>
+        <!-- id가 없는 상태로 수정 페이지에 진입 = 새 앨범 만들기(생성 모드) -->
+        <a href="album-edit.html" class="pill-btn pill-btn-solid">+ 새 앨범 만들기</a>
+      </div>
+
+      <div class="album-grid" id="album-grid"></div>
+      <p class="empty-state" id="album-empty" hidden>아직 만든 앨범이 없어요. 첫 여행을 기록해보세요!</p>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="./js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabaseClient.js"></script>
+<script src="./js/authState.js"></script>
+<script src="./js/app.js"></script>
+<script src="./js/topnav.js"></script>
+<script src="./js/sidebar.js"></script>
+<script src="./js/bookmark.js"></script>
+<script src="./js/album.js"></script>
+</body>
+</html>

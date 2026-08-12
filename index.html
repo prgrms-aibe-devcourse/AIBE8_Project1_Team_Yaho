@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>어디갈까? · 국내여행 랜덤 추천 서비스</title>
+  <meta name="description" content="어디로 떠날지 고민될 때, 랜덤으로 국내 여행지를 추천해드립니다." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" href="css/reset.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/map.css" />
+  <link rel="icon" href="images/favicon.ico" />
+</head>
+<body>
+
+  <!-- ===== 헤더 (topnav.js가 SVG 스프라이트까지 함께 그려줌) ===== -->
+  <div id="app-topnav"></div>
+
+  <!-- ===== 본문 ===== -->
+  <main class="layout">
+
+    <!-- ---------- 좌측 패널 ---------- -->
+    <aside class="panel panel--left">
+
+      <!-- 랜덤 뽑기 -->
+      <section class="draw">
+        <div class="draw__head">
+          <img class="draw__dice" id="dice" src="images/ui-dice.png" alt="" />
+          <div class="draw__copy">
+            <strong class="draw__title">랜덤 여행 뽑기</strong>
+            <span class="draw__sub">어디로 떠날지 고민된다면?</span>
+          </div>
+        </div>
+        <button class="draw__btn" type="button" id="btnDraw">
+          <span class="draw__spark">✦</span> 뽑기 시작하기 <span class="draw__spark">✦</span>
+        </button>
+      </section>
+
+      <!-- 지역 선택 -->
+      <section class="block">
+        <div class="block__head">
+          <h2 class="block__title">지역 선택 <svg class="ico ico--pin"><use href="#i-pin"/></svg></h2>
+        </div>
+
+        <div class="origin">
+          <button class="origin__select" type="button" id="originSelect" aria-haspopup="listbox" aria-expanded="false">
+            <span id="originLabel">지역을 선택하세요</span>
+            <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
+          </button>
+          <ul class="origin__list" id="originList" role="listbox" hidden></ul>
+        </div>
+
+        <button class="chip chip--geo" type="button" id="btnGeo">
+          <svg class="ico"><use href="#i-target"/></svg><span id="geoLabel">내 위치로 이동</span>
+        </button>
+      </section>
+
+      <!-- 인기 지역 -->
+      <div class="block__head block__head--pad">
+        <h2 class="block__title">인기 지역</h2>
+        <a class="block__more" href="popArea.html">전체보기 <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg></a>
+      </div>
+      <ul class="popular" id="popularList"></ul>
+
+      <!-- 이런 여행지 어때요? -->
+      <section class="block">
+        <div class="block__head block__head--pad">
+          <h2 class="block__title">이런 여행지 어때요?</h2>
+          <div class="spot-grid__pager" id="spotPager">
+            <button class="spot-grid__pager-btn" type="button" id="spotPagerPrev" aria-label="이전 페이지">
+              <svg class="ico ico--chevron"><use href="#i-chevron-left"/></svg>
+            </button>
+            <span class="spot-grid__pager-label" id="spotPagerLabel">1/5</span>
+            <button class="spot-grid__pager-btn" type="button" id="spotPagerNext" aria-label="다음 페이지">
+              <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
+            </button>
+          </div>
+        </div>
+        <ul class="filter-row" id="categoryFilter">
+          <li><button class="chip chip--filter is-active" type="button" data-cat="전체">전체</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="자연">자연</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="역사">역사</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="체험">체험</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="레저">레저</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="쇼핑">쇼핑</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="문화">문화</button></li>
+          <li><button class="chip chip--filter" type="button" data-cat="음식">음식</button></li>
+        </ul>
+        <ul class="spot-grid" id="spotGrid"></ul>
+      </section>
+    </aside>
+
+    <!-- ---------- 지도 ---------- -->
+    <section class="map" aria-label="대한민국 여행지 지도">
+      <button class="map__back" id="mapBack" type="button" hidden>
+        <svg class="ico"><use href="#i-chevron-left"/></svg>돌아가기
+      </button>
+      <div class="map__bg" id="mapBg"></div>
+      <div class="map__markers" id="markers"></div>
+      <div class="map__tip" id="mapTip" hidden></div>
+      <div class="map__label" id="mapLabel">
+        <button class="map__label-btn" id="mapLabelBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="map__label-sido" id="mapLabelSido"></span>
+          <strong class="map__label-sigungu" id="mapLabelSigungu">클릭하여 지역 선택</strong>
+        </button>
+        <ul class="map__label-dropup" id="mapLabelDropup" role="listbox"></ul>
+      </div>
+      <div class="sigungu-draw" id="sigunguDraw" hidden>
+        <div class="sigungu-draw__dialog">
+          <button class="sigungu-draw__close" type="button" id="sigunguDrawClose" aria-label="닫기">&times;</button>
+          <p class="sigungu-draw__eyebrow" id="sigunguDrawEyebrow">✦ 시/군/구 뽑는 중</p>
+          <p class="sigungu-draw__question" id="sigunguDrawQuestion" hidden>시/군/구도 뽑아볼까요?</p>
+          <div class="sigungu-draw__spin" id="sigunguDrawText" hidden></div>
+          <button class="btn btn--primary btn--cta" type="button" id="sigunguDrawStart" hidden>한 번 더 뽑기</button>
+          <button class="btn btn--primary btn--cta" type="button" id="sigunguDrawConfirm" hidden>여행지 확인하기</button>
+        </div>
+      </div>
+      <div class="region-preview" id="regionPreview" hidden>
+        <button class="region-preview__close" type="button" id="regionPreviewClose" aria-label="닫기">&times;</button>
+        <p class="region-preview__title" id="regionPreviewTitle"></p>
+        <ul class="region-preview__grid" id="regionPreviewGrid"></ul>
+        <button class="btn btn--primary btn--cta region-preview__more" type="button" id="regionPreviewMore"></button>
+      </div>
+    </section>
+
+    <!-- ---------- 우측 패널 ---------- -->
+    <aside class="panel panel--right">
+
+      <div class="block__head">
+        <h2 class="block__title block__title--lg">오늘의 여행지<span class="emoji">✦</span></h2>
+        <div class="spot-grid__pager" id="todaySpotPager">
+          <button class="spot-grid__pager-btn" type="button" id="todaySpotPrev" aria-label="이전 여행지">
+            <svg class="ico ico--chevron"><use href="#i-chevron-left"/></svg>
+          </button>
+          <span class="spot-grid__pager-label" id="todaySpotPagerLabel">1/5</span>
+          <button class="spot-grid__pager-btn" type="button" id="todaySpotNext" aria-label="다음 여행지">
+            <svg class="ico ico--chevron"><use href="#i-chevron-right"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <article class="today" id="today">
+        <div class="today__media">
+          <img class="today__img" id="todayImg" src="images/hero-gangneung.png" alt="" />
+          <button class="today__like" type="button" id="btnLike" aria-pressed="false" aria-label="찜하기">
+            <svg class="ico"><use href="#i-bookmark"/></svg>
+          </button>
+        </div>
+
+        <div class="today__badge">
+          <span class="today__region"><svg class="ico"><use href="#i-pin"/></svg><span id="todayRegion">강원도</span></span>
+          <h3 class="today__name" id="todayName">강릉</h3>
+        </div>
+
+        <p class="today__desc">
+          <strong class="today__desc-title" id="todayTitle">강릉 커피거리</strong>
+          <span class="today__desc-addr" id="todayAddr">강원특별자치도 강릉시</span>
+        </p>
+      </article>
+
+      <button class="btn btn--primary btn--cta" type="button" id="btnGo">
+        <svg class="ico"><use href="#i-route"/></svg> 길찾기
+      </button>
+      <a class="btn btn--outline btn--cta" href="#" id="linkDetail">
+        <svg class="ico"><use href="#i-search"/></svg> 여행지 상세정보
+      </a>
+
+      <div class="block__head block__head--pad">
+        <h2 class="block__title">내 여행 기록</h2>
+      </div>
+      <div class="my-record" id="myRecord"></div>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=yaueu35tew&submodules=geocoder"></script>
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/authState.js"></script>
+  <script src="js/apiCache.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/topnav.js"></script>
+  <script src="js/todaySpot.js"></script>
+  <script src="js/bookmark.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
