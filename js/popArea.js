@@ -290,7 +290,7 @@ function initPopAreaPage() {
     const li = (id) => `
       <li>
         <button type="button" class="chip chip--filter${state.sidoCode === id ? ' is-active' : ''}" data-sido="${id}">
-          ${(bjdCodes && bjdCodes.sido[id]) || id}
+          ${(bjdCodes && bjdCodes.sido[id]) || SIDO_FALLBACK_NAMES[id] || id}
         </button>
       </li>`;
     el.sidoRow1.innerHTML = MAP_SIDO_IDS.slice(0, 10).map(li).join('');
