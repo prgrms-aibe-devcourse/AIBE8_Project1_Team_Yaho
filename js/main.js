@@ -197,7 +197,10 @@ import { getPopularRegions } from './popArea.js';
     }
   }
 
-  /* --- 출발지 드롭업 (시/도 목록 또는 선택된 시/도의 시/군/구 목록) --- */
+  /* --- 출발지 드롭업 (시/도 목록 또는 선택된 시/도의 시/군/구 목록) — 지도 SVG와 같은
+     법정동 코드 체계를 그대로 씀. 지도가 쓰는 코드와 실제 TourAPI 조회 코드가 어긋나는
+     지역(세종 등)은 map.js의 showRegionPreview 안에서 공통으로 번역해서 처리한다 —
+     그래야 사이드바에서 골라도 지도가 똑같이 확대/강조된다 */
   function renderOriginDropup() {
     if (!el.originList || !bjdCodes) return;
 
@@ -427,7 +430,7 @@ import { getPopularRegions } from './popArea.js';
       }
 
       const btn = e.target.closest('button[data-id]');
-      if (!btn || !bjdCodes) return;
+      if (!btn) return;
 
       if (originLevel === 'sido') {
         originSidoPick = btn.dataset.id;
@@ -436,14 +439,11 @@ import { getPopularRegions } from './popArea.js';
         return;
       }
 
-      const sidoName = bjdCodes.sido[originSidoPick] || '';
-      const sigunguName = bjdCodes.sigungu[btn.dataset.id] || '';
-      state.origin = `${sidoName} ${sigunguName}`;
-      state.originId = btn.dataset.id;
-      el.originLabel.textContent = state.origin;
+      const sidoName = (bjdCodes && bjdCodes.sido[originSidoPick]) || '';
+      const origin = `${sidoName} ${btn.textContent}`.trim();
       closeOriginDropup();
-      showToast(`${state.origin} 여행지를 살펴보세요`);
-      if (mapApi) mapApi.showRegionPreview(originSidoPick, btn.dataset.id);
+      showToast(`${origin} 여행지를 살펴보세요`);
+      goToMyRegion(origin, btn.dataset.id); /* 지도도 같이 확대·강조 */
     });
 
     document.addEventListener('click', (e) => {

@@ -11,7 +11,7 @@
 const baseUrl = "https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList";
 
 /* 지도 SVG(images/map-korea.svg)에 그려진 시/도 id 17개 — REGIONS를 대체 (map.js와 동일) */
-const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','45','46','47','48','50','51'];
+const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','46','47','48','50','51','52'];
 
 let bjdCodes = null;
 const bjdCodesReady = fetch('data/bjd-codes.json')
@@ -219,10 +219,9 @@ function sumByGroup(totals, { touDivCds, sidoCode, groupBy }) {
 const roundToTenThousand = (n) => Math.round(n / 10000) * 10000;
 
 /* 이 API의 시/도 코드는 법정동코드 기준 시/도 id와 완전히 같지 않음 — 실측해보니
-   전북은 개편 전 코드(45) 대신 전북특별자치도 코드(52)로 오고, 광주·전남은 "12"
-   하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로 필터링/표시하려면
-   이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
-const SIDO_API_ALIASES = { 29: '12', 46: '12', 45: '52' };
+   광주·전남은 "12" 하나로 묶여서 온다(둘을 구분해서 주지 않음). 지도가 쓰는 시/도 id로
+   필터링/표시하려면 이 API가 실제로 쓰는 코드로 옮겨줘야 한다 */
+const SIDO_API_ALIASES = { 29: '12', 46: '12' };
 const SIDO_FALLBACK_NAMES = { 12: '광주광역시 · 전라남도', 52: '전북특별자치도' };
 
 /* scope: 'all' | 'sido' | 'domestic' | 'foreign'

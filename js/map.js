@@ -10,13 +10,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* 지도 SVG(images/map-korea.svg)에 그려진 시/도 id 17개 — REGIONS를 대체 */
-const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','45','46','47','48','50','51'];
+const MAP_SIDO_IDS = ['11','26','27','28','29','30','31','36','41','43','44','46','47','48','50','51','52'];
 /* 랜덤뽑기 결과 토스트에 쓰는 대표 여행지(있는 시/도만) — DESTINATIONS를 대체 */
 const FEATURED_DEST = {
   11: { name: '서울' }, 26: { name: '부산' }, 36: { name: '세종' },
-  41: { name: '가평' }, 45: { name: '전주' }, 46: { name: '여수' },
-  47: { name: '경주' }, 50: { name: '제주' }, 51: { name: '강릉' },
+  41: { name: '가평' }, 46: { name: '여수' },
+  47: { name: '경주' }, 50: { name: '제주' }, 51: { name: '강릉' }, 52: { name: '전주' },
 };
+
+/* 지역 미리보기 모달에서 조회할 개수 — postList.js의 ITEMS_PER_SIGUNGU(20)와 반드시
+   맞춰야 한다. 두 값이 같으면 완성된 API 요청 URL도 완전히 같아져서, Supabase 공유
+   캐시(js/apiCache.js, api.js)를 그대로 재사용할 수 있다 — 지도에서 지역을 눌러 이
+   모달을 봤다가 "○○ 살펴보기"로 postList.html에 들어가도(또는 반대 순서로도)
+   TourAPI를 두 번 호출하지 않게 하기 위함. 화면에는 어차피 앞 4개만 보여준다. */
+const PREVIEW_FETCH_SIZE = 20;
 
 export function initMap({ showToast, drawEl, drawBtnEl }) {
   const el = {
@@ -136,6 +143,47 @@ export function initMap({ showToast, drawEl, drawBtnEl }) {
      조회 가능함 — 법정동 원래 코드로 요청하면 0건 반환 (실측 확인). 미리보기 조회 시에만 변환 */
   const MERGED_SIDO_BASE = { 29: '12', 46: '12' };
 
+  /* 세종처럼 법정동 시/도 코드(2자리, 지도 SVG·bjdCodes가 쓰는 값)와 TourAPI가 실제로
+     인정하는 시/도 코드가 다른 지역이 있음(실측 확인 — 세종은 2자리 '36' 대신 5자리
+     '36110'을 그대로 씀) — ldongCode2 전체 목록에서 그 코드로 시작하는 실제 코드를 찾아 씀 */
+  let apiSidoListPromise = null;
+  function getApiSidoList() {
+    if (!apiSidoListPromise) apiSidoListPromise = TourAPI.getAreaCodes().catch(() => []);
+    return apiSidoListPromise;
+  }
+  async function resolveApiSidoCode(bjdSidoId) {
+    if (MERGED_SIDO_BASE[bjdSidoId]) return MERGED_SIDO_BASE[bjdSidoId];
+    const apiSidos = await getApiSidoList();
+    if (apiSidos.some((a) => a.code === bjdSidoId)) return bjdSidoId;
+    const prefixMatch = apiSidos.find((a) => a.code.startsWith(bjdSidoId));
+    return prefixMatch ? prefixMatch.code : bjdSidoId;
+  }
+
+  /* lDongSignguCd는 5자리 법정동코드에서 앞 2자리(시/도)를 뗀 3자리라고 가정하고 써왔는데,
+     세종처럼 그 가정이 실제 TourAPI 코드와 어긋나는 지역이 있어(실측 확인) 조회 결과가
+     0건으로 나옴 — ldongCode2로 그 시/도의 실제 시/군/구 코드 목록을 받아 이름으로
+     맞는 코드를 찾아 쓰고, 못 찾으면 기존 방식(3자리 자르기)으로 되돌아간다 */
+  const apiSigunguListCache = {};
+  function getApiSigunguList(baseSidoId) {
+    if (!apiSigunguListCache[baseSidoId]) {
+      apiSigunguListCache[baseSidoId] = TourAPI.getSigunguCodes(baseSidoId).catch(() => []);
+    }
+    return apiSigunguListCache[baseSidoId];
+  }
+  async function resolveApiSuffix(baseSidoId, localId) {
+    const fallback = localId && localId.length > 2 ? localId.slice(2) : localId;
+    const list = await getApiSigunguList(baseSidoId);
+    const localName = bjdCodes && bjdCodes.sigungu[localId];
+    if (localName) {
+      const match = list.find((s) => s.name === localName);
+      if (match) return match.code;
+    }
+    /* 세종처럼 구가 없는 자치시는 TourAPI 시/군/구 목록에 자기 자신 코드 하나만 옴 —
+       이름이 로컬 표기와 달라 못 찾아도 하나뿐이면 그게 정답이므로 그대로 씀 */
+    if (list.length === 1) return list[0].code;
+    return fallback;
+  }
+
   function hideRegionPreview() {
     if (el.preview) el.preview.hidden = true;
   }
@@ -154,19 +202,22 @@ export function initMap({ showToast, drawEl, drawBtnEl }) {
 
     el.previewTitle.textContent = fullName;
     el.previewMore.textContent = `${sigunguName || sidoName} 살펴보기`;
-    el.previewMore.onclick = () => {
-      location.href = `postList.html?area=${sidoId}&sigungu=${group.memberIds.join(',')}`;
-    };
     el.previewGrid.innerHTML = '<li class="region-preview__empty">불러오는 중…</li>';
     el.preview.hidden = false;
 
     let items = [];
     try {
-      // TourAPI 시군구 코드는 5자리 법정동코드가 아니라 시도코드를 뺀 3자리 코드로만 조회됨
-      const baseSidoId = MERGED_SIDO_BASE[sidoId] || sidoId;
-      const lists = await Promise.all(group.memberIds.map((id) => {
-        const suffix = id && id.length > 2 ? id.slice(2) : id;
-        return TourAPI.getTravelListByArea(baseSidoId, 4, suffix).catch(() => []);
+      const baseSidoId = await resolveApiSidoCode(sidoId);
+      /* postList.js(여행 정보 페이지)도 이 코드로 지역을 찾으므로 "살펴보기" 링크는
+         지도용 법정동 코드가 아니라 실제 TourAPI 코드로 넘겨야 함 */
+      el.previewMore.onclick = () => {
+        location.href = `postList.html?area=${baseSidoId}&sigungu=${group.memberIds.join(',')}`;
+      };
+      const lists = await Promise.all(group.memberIds.map(async (id) => {
+        const suffix = await resolveApiSuffix(baseSidoId, id);
+        // numOfRows=4 대신 PREVIEW_FETCH_SIZE(20)로 요청 — postList.js와 같은 URL이
+        // 되어야 캐시를 공유함 (아래에서 화면엔 어차피 4개만 잘라 보여줌)
+        return TourAPI.getTravelListByArea(baseSidoId, PREVIEW_FETCH_SIZE, suffix).catch(() => []);
       }));
       const seen = new Set();
       items = lists.flat().filter((it) => {
